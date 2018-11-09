@@ -9,6 +9,7 @@ from functools import partial
 # beta^j --> (M,)
 # mu --> (N,)
 
+EPS = 1e-8
 
 def sigmoid(x):
   return 1 / (1 + np.exp(-x))
@@ -91,26 +92,32 @@ class EM_DS_Raykar:
         new_w = newton(w, partial(self.grad_w, mu=mu), self.hess_w, 100)
         return new_alpha, new_beta, new_w
 
-    def e_loglikelihood(self, a, b, w, mu):
+    def e_loglikelihood(self, alpha, beta, w, mu):
+        a = self.a(alpha)
+        b = self.b(beta)
+        a[a == 0] = EPS
+        b[b == 0] = EPS
         return (mu*np.log(a) + mu*np.log(self.p_y1(w)*self.l + 1 - self.l) + (1 - mu)*np.log(b) + \
                (1 - mu)*np.log((1 - self.p_y1(w))*self.l + 1 - self.l)).sum()
 
-    def update_mu(self, a, b, w):
+    def update_mu(self, alpha, beta, w):
+        a = self.a(alpha)
+        b = self.b(beta)
         pA = self.p_y1(w)
         pB = self.p_y1()
         return a*pA/(a*pA + b*(1 - pA))*self.l + a*pB/(a*pB + b*(1 - pB))*(1 - self.l)
 
     def em_step(self, alpha, beta, w, mu):
-        new_mu = self.update_mu(self.a(alpha), self.b(beta), w)
+        new_mu = self.update_mu(alpha, beta, w)
         new_alpha, new_beta, new_w = self.update_vars(w, mu)
         return new_alpha, new_beta, new_w, new_mu
 
     def em_algorithm(self):
         alpha, beta, w, mu = self.initialize_values()
         alpha, beta, w = self.update_vars(w, mu)
-        exp_old = self.e_loglikelihood(self.a(alpha), self.b(beta), w, mu)
+        exp_old = self.e_loglikelihood(alpha, beta, w, mu)
         alpha, beta, w, mu = self.em_step(alpha, beta, w, mu)
-        exp_new = self.e_loglikelihood(self.a(alpha), self.b(beta), w, mu)
+        exp_new = self.e_loglikelihood(alpha, beta, w, mu)
 
         step = 0
         self.out(step, alpha, beta, w, mu, exp_new)
@@ -119,7 +126,7 @@ class EM_DS_Raykar:
                 print("\nDiff = {}\n".format(exp_new - exp_old))
             alpha, beta, w, mu = self.em_step(alpha, beta, w, mu)
             exp_old = exp_new
-            exp_new = self.e_loglikelihood(self.a(alpha), self.b(beta), w, mu)
+            exp_new = self.e_loglikelihood(alpha, beta, w, mu)
             step += 1
             if self.verbose:
                 self.out(step, alpha, beta, w, mu, exp_new)

@@ -82,12 +82,12 @@ class TestCalculations(unittest.TestCase):
         assert(np.allclose(a, a_ans))
         assert(np.allclose(b, b_ans))
 
-        mus = em_dsraykar.update_mu(a, b, w)
+        mus = em_dsraykar.update_mu(alpha, beta, w)
         ans_mu = [0.5399433, 0.997577, 0.464722]
         for i, mu in enumerate(mus):
             assert(abs(mu - ans_mu[i]) < 1e-4)
 
-        e_log = em_dsraykar.e_loglikelihood(a, b, w, mus)
+        e_log = em_dsraykar.e_loglikelihood(alpha, beta, w, mus)
         e_log_ans = -2.5613497
         assert(abs(e_log - e_log_ans) < 1e-4)
 

@@ -68,23 +68,23 @@ def generate_AB_points(n, m, d,
     return x, y_real, y_workers
 
 
-def generate_points(n, m, d, l,
-                    low=-10, high=10):
+def generate_points(n, m, d, l):
     np.random.seed(0)
 
     u = np.random.normal(size=(m, d))
     w = np.random.normal(size=(d,))
+    print('w={}'.format(w))
 
-    x = np.random.uniform(low, high, (n, d))
+    x = np.random.normal(size=(n, d))
     y_workers = np.zeros((n*m, 4))
-    y_real = np.zeros((n,))
 
-    model_answer = np.random.binomial(size=n, n=1, p=np.squeeze(sigmoid(np.matmul(x, w[:, None]))))
     model_true = np.random.binomial(size=n, n=1, p=l)
+    model_answer = np.where(model_true, (np.squeeze(sigmoid(np.matmul(x, w[:, None]))) > 0.5).astype(int),
+                            (np.squeeze(sigmoid(np.matmul(x, w[:, None]))) < 0.5).astype(int))
     workers_true = np.random.binomial(size=(n, m), n=1, p=sigmoid(np.matmul(x, np.transpose(u))))
 
     workers_labels = np.transpose(np.where(np.logical_xor(model_true, np.transpose(workers_true)),
-                              model_answer, 1 - model_answer))
+                              1 - model_answer, model_answer))
     y_workers[:, 2] = workers_labels.flatten()
 
     y_real = np.where(model_true, model_answer, 1 - model_answer)
@@ -116,5 +116,5 @@ if __name__ == '__main__':
     # x, y_real, y_workers = generate_AB_points(100, 10, 3, 0.3, 0.6, np.array([1, 2, 3]), 0.55)
     # save_points(x, y_real, y_workers, 'generated/crowd_AB.tsv', 'generated/tasks_AB.tsv')
     #
-    x, y_real, y_workers = generate_points(100, 10, 3, 0.3)
+    x, y_real, y_workers = generate_points(2, 4, 3, 0.7)
     save_points(x, y_real, y_workers, 'generated/crowd.tsv', 'generated/tasks.tsv')

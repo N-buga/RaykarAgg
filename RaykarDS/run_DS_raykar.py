@@ -12,7 +12,7 @@ def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans
         raise AttributeError('Different count of answers for tasks')
 
     diff_answers = crowd_data[gold_ans_column].unique()
-    if diff_answers.shape[0] != 2:
+    if diff_answers.shape[0] > 2:
         raise AttributeError('No binary answers')
 
     x = tasks_data.iloc[:, 2:].values
@@ -21,8 +21,7 @@ def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans
     ).values
     y_real = np.squeeze(crowd_data[[task_column, gold_ans_column]].groupby(task_column).first().values)
 
-    # for l in np.arange(0.1, 0.9, 0.1):
-    l = 0.3
+    l = 0.8
     em_ds_raykar = EM_DS_Raykar(x, y, l, verbose=True)
     alpha, beta, w, mu = em_ds_raykar.em_algorithm()
     print('!!!!!!!!!!!!l={}!!!!!!!!!!!!!'.format(l))
@@ -30,15 +29,19 @@ def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans
     print('beta={}'.format(beta))
     print('w={}'.format(w))
     print("P real = {}".format(np.where(y_real == 1, mu, 1 - mu)))
-    print('Elog={}'.format(em_ds_raykar.e_loglikelihood(em_ds_raykar.a(alpha), em_ds_raykar.b(beta), w, mu)))
+    print('Elog={}'.format(em_ds_raykar.e_loglikelihood(alpha, beta, w, mu)))
+    print("Overall error: {}".format((abs(y_real - mu)).mean()))
 
-    # real_alpha = 0.3*np.ones((alpha.shape[0],))
-    # real_beta = 0.6*np.ones((alpha.shape[0],))
-    # a = em_ds_raykar.a(real_alpha)
-    # b = em_ds_raykar.b(real_beta)
-    # real_w = np.array([1, 2, 3])
-    # real_mu = em_ds_raykar.update_mu(a, b, real_w)
-    # print('Real logik={}'.format(em_ds_raykar.e_loglikelihood(a, b, real_w, real_mu)))
+    real_mu = y_real
+    # real_w = np.array([0.4105985, 0.14404357, 1.45427351])
+    # real_w = np.array([0.15494743, 0.37816252, -0.88778575])
+    real_w = np.array([0.76103773, 0.12167502, 0.44386323])
+
+    alpha, beta, w = em_ds_raykar.update_vars(real_w, real_mu)
+    print('Ereallog={}'.format(em_ds_raykar.e_loglikelihood(alpha, beta, real_w, real_mu)))
+    mu = em_ds_raykar.update_mu(alpha, beta, real_w)
+    print("Error after update mu: {}".format((abs(mu - real_mu)).mean()))
+    print("Elog after update mu: {}".format(em_ds_raykar.e_loglikelihood(alpha, beta, real_w, mu)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

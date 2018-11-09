@@ -30,7 +30,7 @@ def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans
     print('beta={}'.format(beta))
     print('w={}'.format(w))
     print("P real = {}".format(np.where(y_real == 1, mu, 1 - mu)))
-    print('loglik={}'.format(em_ds_raykar.e_loglikelihood(em_ds_raykar.a(alpha), em_ds_raykar.b(beta), w, mu)))
+    print('Elog={}'.format(em_ds_raykar.e_loglikelihood(em_ds_raykar.a(alpha), em_ds_raykar.b(beta), w, mu)))
 
     # real_alpha = 0.3*np.ones((alpha.shape[0],))
     # real_beta = 0.6*np.ones((alpha.shape[0],))

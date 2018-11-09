@@ -2,7 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 
-from em import EM_DS_Raykar
+from em_raykarDS import EM_DS_Raykar
 
 
 def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans_column, gold_ans_column):
@@ -28,14 +28,15 @@ def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans
     print('alpha={}'.format(alpha))
     print('beta={}'.format(beta))
     print('w={}'.format(w))
+    print('grad w={}'.format(em_ds_raykar.grad_w(w, mu)))
     print("P real = {}".format(np.where(y_real == 1, mu, 1 - mu)))
     print('Elog={}'.format(em_ds_raykar.e_loglikelihood(alpha, beta, w, mu)))
     print("Overall error: {}".format((abs(y_real - mu)).mean()))
 
     real_mu = y_real
-    # real_w = np.array([0.4105985, 0.14404357, 1.45427351])
-    # real_w = np.array([0.15494743, 0.37816252, -0.88778575])
     real_w = np.array([0.76103773, 0.12167502, 0.44386323])
+    # real_w = np.array([0.15494743, 0.37816252, -0.88778575])
+    # real_w = np.array([0.76103773, 0.12167502, 0.44386323])
 
     alpha, beta, w = em_ds_raykar.update_vars(real_w, real_mu)
     print('Ereallog={}'.format(em_ds_raykar.e_loglikelihood(alpha, beta, real_w, real_mu)))

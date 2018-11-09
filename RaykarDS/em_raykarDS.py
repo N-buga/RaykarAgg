@@ -11,6 +11,7 @@ from functools import partial
 
 EPS = 1e-8
 
+
 def sigmoid(x):
   return 1 / (1 + np.exp(-x))
 
@@ -18,6 +19,12 @@ def sigmoid(x):
 def newton(w, grad_func, hess_func, step_counts=100, step=0.01):
     for i in range(step_counts):
         w -= step * np.matmul(np.linalg.inv(hess_func(w)), grad_func(w))
+    return w
+
+
+def grad_descent(w, grad_func, step_counts=100, step=0.001):
+    for i in range(step_counts):
+        w += step * grad_func(w)
     return w
 
 
@@ -72,24 +79,21 @@ class EM_DS_Raykar:
         :param mu:
         :return:
         """
-        return ((mu - sigmoid(np.matmul(self.x, w)))*np.transpose(self.x)).sum(axis=1)
+        p = self.p_y1(w)
+        koeff = p*(1 - p)*(mu*self.l/(p*self.l + 1 - self.l) - (1 - mu)*self.l/((1 - p)*self.l + 1 - self.l))
+        return np.squeeze(np.matmul(koeff[None, :], self.x))
 
-    def hess_w(self, w):
-        """
-        Hessian of w.
-        :param w: Weights in linear regression.
-        :return:
-        """
-        trans_x = np.transpose(self.x)
-        x_with_values = np.transpose((1 - sigmoid(np.matmul(self.x, w)))*sigmoid(np.matmul(self.x, w))*trans_x)
-        ans = -np.dot(trans_x[None, :, :], x_with_values[None, :, :])
-        ans_sq = np.squeeze(ans)
-        return ans_sq
+    # def hess_w(self, w):
+    #     """
+    #     Hessian of w.
+    #     :param w: Weights in linear regression.
+    #     :return:
+    #     """
 
     def update_vars(self, w, mu):
         new_alpha = np.matmul(np.transpose(self.y), mu)/(mu.sum())
         new_beta = np.matmul((1 - np.transpose(self.y)), (1 - mu))/((1 - mu).sum())
-        new_w = newton(w, partial(self.grad_w, mu=mu), self.hess_w, 100)
+        new_w = grad_descent(w, partial(self.grad_w, mu=mu), 100)
         return new_alpha, new_beta, new_w
 
     def e_loglikelihood(self, alpha, beta, w, mu):
@@ -131,9 +135,12 @@ class EM_DS_Raykar:
             if self.verbose:
                 self.out(step, alpha, beta, w, mu, exp_new)
 
+            if step > 10000:
+                break
+
         return alpha, beta, w, mu
 
     @staticmethod
     def out(step, alpha, beta, w, mu, exp_new):
-        print("--------------------\nStep={}\nalpha={}\nbeta={}\nw={}\nmu={}\nlog E={}\n"
-              .format(step, alpha, beta, w, mu, exp_new))
+        print("--------------------\nStep={}\nlog E={}\n"
+              .format(step, exp_new))

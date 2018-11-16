@@ -53,11 +53,11 @@ class EM_DS_Raykar:
         a = np.prod(np.power(beta, 1 - self.y), axis=1)*np.prod(np.power(1 - beta, self.y), axis=1)
         return a
 
-    def p_y1(self, w=None):
-        if w is not None:
-            return sigmoid(np.matmul(self.x, w))
-        else:
-            return self.y.mean(axis=1)
+    def p(self, w):
+        return sigmoid(np.matmul(self.x, w))
+
+    def q(self):
+        return self.y.mean(axis=1)
 
     def initialize_values(self):
         """
@@ -79,8 +79,9 @@ class EM_DS_Raykar:
         :param mu:
         :return:
         """
-        p = self.p_y1(w)
-        koeff = p*(1 - p)*(mu*self.l/(p*self.l + 1 - self.l) - (1 - mu)*self.l/((1 - p)*self.l + 1 - self.l))
+        p = self.p(w)
+        q = self.q()
+        koeff = p*(1 - p)*(mu*self.l/(p*self.l + q*(1 - self.l)) - (1 - mu)*self.l/(1 - p*self.l - q*(1 - self.l)))
         return np.squeeze(np.matmul(koeff[None, :], self.x))
 
     # def hess_w(self, w):
@@ -101,15 +102,17 @@ class EM_DS_Raykar:
         b = self.b(beta)
         a[a == 0] = EPS
         b[b == 0] = EPS
-        return (mu*np.log(a) + mu*np.log(self.p_y1(w)*self.l + 1 - self.l) + (1 - mu)*np.log(b) + \
-               (1 - mu)*np.log((1 - self.p_y1(w))*self.l + 1 - self.l)).sum()
+        p = self.p(w)
+        q = self.q()
+        return (mu*np.log(a) + mu*np.log(p*self.l + q*(1 - self.l)) + (1 - mu)*np.log(b) + \
+               (1 - mu)*np.log(1 - p*self.l - q*(1 - self.l))).sum()
 
     def update_mu(self, alpha, beta, w):
         a = self.a(alpha)
         b = self.b(beta)
-        pA = self.p_y1(w)
-        pB = self.p_y1()
-        return a*pA/(a*pA + b*(1 - pA))*self.l + a*pB/(a*pB + b*(1 - pB))*(1 - self.l)
+        p = self.p(w)
+        q = self.q()
+        return a*p/(a*p + b*(1 - p))*self.l + a*q/(a*q + b*(1 - q))*(1 - self.l)
 
     def em_step(self, alpha, beta, w, mu):
         new_mu = self.update_mu(alpha, beta, w)
@@ -135,7 +138,7 @@ class EM_DS_Raykar:
             if self.verbose:
                 self.out(step, alpha, beta, w, mu, exp_new)
 
-            if step > 10000:
+            if step > 1000:
                 break
 
         return alpha, beta, w, mu

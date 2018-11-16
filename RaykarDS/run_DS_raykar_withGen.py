@@ -16,14 +16,14 @@ def run_ds_reykar(x, y_real, y_workers, l, real_w):
     print('w={}'.format(w))
     print('real_w{}'.format(real_w))
     print('grad w={}'.format(em_ds_raykar.grad_w(w, mu)))
-    print("P real = {}".format(np.where(y_real == 1, mu, 1 - mu)))
     print('Elog={}'.format(em_ds_raykar.e_loglikelihood(alpha, beta, w, mu)))
-    print("Overall error: {}".format((abs(y_real - mu)).mean()))
+    print("Overall crossentropy: {}".format((-y_real*np.log(mu)).sum()))
+    print("Real crossentropy: {}".format((-y_real*np.log(y_real + 1e-9)).sum()))
 
     real_mu = y_real
 
     alpha, beta, w = em_ds_raykar.update_vars(real_w, real_mu)
-    print('Ereallog={}'.format(em_ds_raykar.e_loglikelihood(alpha, beta, real_w, real_mu)))
+    print('Ereallog={}'.format(np.exp((em_ds_raykar.e_loglikelihood(alpha, beta, real_w, real_mu))/x.shape[0])))
     mu = em_ds_raykar.update_mu(alpha, beta, real_w)
     print("Error after update mu: {}".format((abs(mu - real_mu)).mean()))
     print("Elog after update mu: {}".format(em_ds_raykar.e_loglikelihood(alpha, beta, real_w, mu)))
@@ -33,12 +33,12 @@ if __name__ == '__main__':
 
     parser.add_argument('-n',
                         type=int,
-                        default=10,
+                        default=100,
                         help='Number of points')
 
     parser.add_argument('-m',
                         type=int,
-                        default=6,
+                        default=10,
                         help='Number of workers')
 
     parser.add_argument('-d',

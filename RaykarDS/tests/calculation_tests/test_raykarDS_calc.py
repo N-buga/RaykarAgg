@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from em_raykarDS import EM_DS_Raykar, sigmoid
+from em_DSraykar import EM_DS_Raykar, sigmoid
 
 
 class TestCalculations(unittest.TestCase):
@@ -9,7 +9,7 @@ class TestCalculations(unittest.TestCase):
     def test_a(self):
         y = np.array([[1, 0, 1], [1, 1, 1]])
 
-        em_dsraykar = EM_DS_Raykar(y=y, x=None, l=None)
+        em_dsraykar = EM_DS_Raykar(y=y, x=None, y_real=None, l=None)
 
         alpha = np.array([1, 0.6, 0.2])
         assert(np.allclose(em_dsraykar.a(alpha), np.array([0.08, 0.12])))
@@ -17,7 +17,7 @@ class TestCalculations(unittest.TestCase):
     def test_b(self):
         y = np.array([[1, 0, 1], [1, 1, 1]])
 
-        em_dsraykar = EM_DS_Raykar(y=y, x=None, l=None)
+        em_dsraykar = EM_DS_Raykar(y=y, x=None, y_real=None, l=None)
 
         beta = np.array([0.7, 0.6, 0.2])
         assert(np.allclose(em_dsraykar.b(beta), np.array([0.144, 0.096])))
@@ -26,7 +26,7 @@ class TestCalculations(unittest.TestCase):
         x = np.array([[1, 1, 1], [2, 2, 2]])
         y = np.array([[0, 1, 0, 1], [1, 1, 1, 1]])
 
-        em_dsraykar = EM_DS_Raykar(y=y, x=x, l=None)
+        em_dsraykar = EM_DS_Raykar(y=y, x=x, y_real=None, l=None)
 
         alpha, beta, w, mu = em_dsraykar.initialize_values()
         assert(np.allclose(alpha, np.array([0.5, 0.5, 0.5, 0.5])))
@@ -36,9 +36,10 @@ class TestCalculations(unittest.TestCase):
 
     def test_grad_w(self):
         x = np.array([[1, 2, 1], [0, 2, 2]])
+        y = np.array([[0, 1, 0, 1], [0, 1, 1, 1]])
         l = 0.6
 
-        em_dsraykar = EM_DS_Raykar(y=None, x=x, l=l)
+        em_dsraykar = EM_DS_Raykar(y=y, x=x, y_real=None, l=l)
 
         mu = np.array([0.3, 0.2])
         w = np.array([1, 2, 3])
@@ -46,21 +47,44 @@ class TestCalculations(unittest.TestCase):
         ans = np.zeros((x.shape[1],))
         for i in range(x.shape[0]):
             cur_p = sigmoid(np.sum(w*x[i]))
-            ans += x[i]*cur_p*(1 - cur_p)*(mu[i]*(l/(cur_p*l + (1 - l))) + (1 - mu[i])*(-l/((1 - cur_p)*l + 1 - l)))
+            cur_q = y.mean(axis=1)[i]
+            ans += x[i]*cur_p*(1 - cur_p)*(mu[i]*(l/(cur_p*l + (1 - l)*cur_q)) + (1 - mu[i])*(-l/((1 - cur_p)*l + (1 - l)*(1 - cur_q))))
 
         self.assertTrue(np.allclose(ans, em_dsraykar.grad_w(w, mu)))
+
+    def test_hess_w(self):
+        x = np.array([[1, 2, 1], [0, 2, 2]])
+        y = np.array([[0, 1, 0, 1], [0, 1, 1, 1]])
+        l = 0.6
+
+        em_dsraykar = EM_DS_Raykar(y=y, x=x, y_real=None, l=l)
+
+        w = np.array([1, 2, 3])
+        mu = np.array([0.3, 0.2])
+
+        ans = np.zeros((x.shape[1], x.shape[1]))
+        for i in range(x.shape[0]):
+            cur_p = sigmoid(np.sum(w*x[i]))
+            cur_q = y.mean(axis=1)[i]
+            ans += np.matmul(np.transpose(x[i, None]), x[i, None])*\
+                   (mu[i]*l*cur_p*(1 - cur_p)*(1 - 2*cur_p)/(cur_p*l + cur_q*(1 - l)) -
+                    mu[i]*l*l*cur_p*cur_p*(1 - cur_p)*(1 - cur_p)/((cur_p*l + cur_q*(1 - l))*(cur_p*l + cur_q*(1 - l))) -
+                    (1 - mu[i])*l*cur_p*(1 - cur_p)*(1 - 2*cur_p)/((1 - cur_p)*l + (1 - l)*(1 - cur_q)) -
+                    (1 - mu[i])*l*l*cur_p*cur_p*(1 - cur_p)*(1 - cur_p)/(((1 - cur_p)*l + (1 - l)*(1 - cur_q))*((1 - cur_p)*l + (1 - l)*(1 - cur_q))))
+
+        self.assertTrue(np.allclose(ans, em_dsraykar.hess_w(w, mu)))
 
     def test_e_loglikelihood(self):
         x = np.array([[1, 2], [2, 3], [0, 1]])
         y = np.array([[0, 1], [1, 1], [0, 1]])
 
-        em_dsraykar = EM_DS_Raykar(y=y, x=x, l=0.3)
+        em_dsraykar = EM_DS_Raykar(y=y, x=x, l=0.3, y_real=None)
 
         w = np.array([0.5, 1])
         alpha = np.array([0.6, 0.9])
         beta = np.array([0.7, 0.2])
 
-        ps = em_dsraykar.p_y1(w)
+        ps = em_dsraykar.p(w)
         ans_p = [0.92414, 0.98201, 0.73106]
         for i, p in enumerate(ps):
             assert(abs(p - ans_p[i]) < 1e-4)
@@ -77,7 +101,7 @@ class TestCalculations(unittest.TestCase):
             assert(abs(mu - ans_mu[i]) < 1e-4)
 
         e_log = em_dsraykar.e_loglikelihood(alpha, beta, w, mus)
-        e_log_ans = -2.5613497
+        e_log_ans = -3.65826624
         assert(abs(e_log - e_log_ans) < 1e-4)
 
 if __name__ == '__main__':

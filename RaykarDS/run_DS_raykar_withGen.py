@@ -2,23 +2,23 @@ import argparse
 import pandas as pd
 import numpy as np
 
-from em_raykarDS import EM_DS_Raykar
+from em_DSraykar import EM_DS_Raykar
 from generate_data import generate_points, create_dfs
 
 
 def run_ds_reykar(x, y_real, y_workers, l, real_w):
 
-    em_ds_raykar = EM_DS_Raykar(x, y_workers, l, verbose=True)
-    alpha, beta, w, mu = em_ds_raykar.em_algorithm()
-    print('!!!!!!!!!!!!l={}!!!!!!!!!!!!!'.format(l))
-    print('alpha={}'.format(alpha))
-    print('beta={}'.format(beta))
-    print('w={}'.format(w))
-    print('real_w{}'.format(real_w))
-    print('grad w={}'.format(em_ds_raykar.grad_w(w, mu)))
-    print('Elog={}'.format(em_ds_raykar.e_loglikelihood(alpha, beta, w, mu)))
-    print("Overall crossentropy: {}".format((-y_real*np.log(mu)).sum()))
-    print("Real crossentropy: {}".format((-y_real*np.log(y_real + 1e-9)).sum()))
+    em_ds_raykar = EM_DS_Raykar(x, y_workers, y_real, l, verbose=True)
+    # alpha, beta, w, mu = em_ds_raykar.em_algorithm()
+    # print('!!!!!!!!!!!!l={}!!!!!!!!!!!!!'.format(l))
+    # print('alpha={}'.format(alpha))
+    # print('beta={}'.format(beta))
+    # print('w={}'.format(w))
+    # print('real_w{}'.format(real_w))
+    # print('grad w={}'.format(em_ds_raykar.grad_w(w, mu)))
+    # print('Elog={}'.format(np.exp(em_ds_raykar.e_loglikelihood(alpha, beta, w, mu)/x.shape[0])))
+    # print("Overall crossentropy: {}".format((-y_real*np.log(mu)).sum()))
+    # print("Real crossentropy: {}".format((-y_real*np.log(y_real + 1e-9)).sum()))
 
     real_mu = y_real
 
@@ -33,12 +33,12 @@ if __name__ == '__main__':
 
     parser.add_argument('-n',
                         type=int,
-                        default=100,
+                        default=10000,
                         help='Number of points')
 
     parser.add_argument('-m',
                         type=int,
-                        default=10,
+                        default=2,
                         help='Number of workers')
 
     parser.add_argument('-d',
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     parser.add_argument('-l',
                         type=int,
-                        default=0.8,
+                        default=1,
                         help='The quality of model')
 
     parser.add_argument('--task-column',

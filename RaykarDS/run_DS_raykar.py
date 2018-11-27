@@ -2,7 +2,7 @@ import argparse
 import pandas as pd
 import numpy as np
 
-from em_raykarDS import EM_DS_Raykar
+from em_DSraykar import EM_DS_Raykar
 
 
 def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans_column, gold_ans_column):

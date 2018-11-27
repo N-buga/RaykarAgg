@@ -1,0 +1,10 @@
+Mean times:
+GradientDescentOptimizer step=0.01; steps_count=50	124.12181844711304
+GradientDescentOptimizer step=0.1; steps_count=50	124.64204013347626
+GradientDescentOptimizer step=0.1; steps_count=100	243.93714699745178
+NewtonOptimizer step=0.01; steps_count=15	23.809061026573183
+Check result:
+GradientDescentOptimizer step=0.01; steps_count=50	True
+GradientDescentOptimizer step=0.1; steps_count=50	True
+GradientDescentOptimizer step=0.1; steps_count=100	True
+NewtonOptimizer step=0.01; steps_count=15	True

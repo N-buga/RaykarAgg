@@ -28,7 +28,7 @@ class GradientDescentOptimizer(Optimizer):
     """
     Gradient descent optimization.
     """
-    def __init__(self, step=0.001, steps_count=100):
+    def __init__(self, step=0.01, steps_count=50):
         """
         Set parameters for gradient descent.
         :param step: The value of step.

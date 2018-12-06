@@ -1,31 +1,34 @@
-import os
-
 import numpy as np
 import pandas as pd
 from em_DSraykar import sigmoid
 
 
-def generate_AB_points(n, m, d,
-                    alpha, beta, w, l,
-                    low=-20, high=20):
-    np.random.seed(0)
-    x = np.random.uniform(low, high, (n, d))
+def generate_AB_points(n, m, d, l,
+                       alpha, beta,
+                       random_state=0):
+    np.random.seed(random_state)
+    x = np.random.normal(size=(n, d))
+    w = np.random.normal(size=(d,))
+
     model = np.random.binomial(size=n, n=1, p=l)
-    y_real_A = np.where(np.matmul(x, w) > 0.5, np.ones((n,)), np.zeros((n,)))
-    y_real_B = np.random.binomial(size=n, n=1, p=0.4)
+    y_real_A = np.where(sigmoid(np.matmul(x, w)) > 0.5, np.ones((n,)), np.zeros((n,)))
+    y_real_B = np.random.binomial(size=n, n=1, p=0.5)
     y_real = np.where(model == 1, y_real_A, y_real_B)
-    y_workers = np.zeros((n*m, 4))
+    y_all = np.zeros((n*m, 4))
+    y_workers = np.zeros((n, m))
 
     for i in range(n):
-        y_workers[i*m:(i + 1)*m, 0] = i
-        y_workers[i*m:(i + 1)*m, 1] = list(range(m))
-        y_workers[i*m:(i + 1)*m, 3] = y_real[i]
+        y_all[i*m:(i + 1)*m, 0] = i
+        y_all[i*m:(i + 1)*m, 1] = list(range(m))
+        y_all[i*m:(i + 1)*m, 3] = y_real[i]
         if y_real[i] == 1:
-            y_workers[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=alpha)
+            y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=alpha)
+            y_workers[i] = y_all[i*m:(i + 1)*m, 2]
         else:
-            y_workers[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=1-beta)
+            y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=1-beta)
+            y_workers[i] = y_all[i*m:(i + 1)*m, 2]
 
-    return x, y_real, y_workers
+    return x, y_workers, y_real, y_all, alpha, beta, w
 
 
 def generate_model_points(n, m, d,
@@ -73,29 +76,34 @@ def generate_DS_points(n, m, d,
     return x, y_workers, y_real, y_all, alpha, beta, None
 
 
-def generate_points(n, m, d, l):
-    np.random.seed(0)
+def generate_points(n, m, d, l,
+                    alpha, beta,
+                    random_state=0):
+    np.random.seed(random_state)
 
-    u = np.random.normal(size=(m, d))
     w = np.random.normal(size=(d,))
-    print('w={}'.format(w))
 
     x = np.random.normal(size=(n, d))
     y_all = np.zeros((n*m, 4))
 
     model_true = np.random.binomial(size=n, n=1, p=l)
     model_answer = (np.squeeze(sigmoid(np.matmul(x, w[:, None]))) > 0.5).astype(int)
-    workers_labels = np.random.binomial(size=(n, m), n=1, p=sigmoid(np.matmul(x, np.transpose(u))))
-
-    y_all[:, 2] = workers_labels.flatten()
-
     y_real = np.where(model_true, model_answer, 1 - model_answer)
+
+    y_workers = np.zeros((n, m))
+
     for i in range(n):
         y_all[i*m:(i + 1)*m, 0] = i
         y_all[i*m:(i + 1)*m, 1] = list(range(m))
         y_all[i*m:(i + 1)*m, 3] = y_real[i]
+        if y_real[i] == 1:
+            y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=alpha)
+            y_workers[i] = y_all[i*m:(i + 1)*m, 2]
+        else:
+            y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=1-beta)
+            y_workers[i] = y_all[i*m:(i + 1)*m, 2]
 
-    return x, workers_labels, y_real, y_all, None, None, w, None
+    return x, y_workers, y_real, y_all, alpha, beta, w
 
 
 def create_dfs(x, y_real, y_workers,

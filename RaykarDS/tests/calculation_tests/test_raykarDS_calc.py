@@ -28,7 +28,7 @@ class TestCalculations(unittest.TestCase):
 
         em_dsraykar = EM_DS_Raykar(y=y, x=x, y_real=None, l=None)
 
-        alpha, beta, w, mu = em_dsraykar.initialize_values()
+        alpha, beta, w, mu, l = em_dsraykar.initialize_values()
         assert(np.allclose(alpha, np.array([0.5, 0.5, 0.5, 0.5])))
         assert(np.allclose(beta, np.array([0.5, 0.5, 0.5, 0.5])))
         assert(np.allclose(mu, np.array([0.5, 1])))
@@ -50,7 +50,7 @@ class TestCalculations(unittest.TestCase):
             cur_q = y.mean(axis=1)[i]
             ans += x[i]*cur_p*(1 - cur_p)*(mu[i]*(l/(cur_p*l + (1 - l)*cur_q)) + (1 - mu[i])*(-l/((1 - cur_p)*l + (1 - l)*(1 - cur_q))))
 
-        self.assertTrue(np.allclose(ans, em_dsraykar.grad_w(w, mu)))
+        self.assertTrue(np.allclose(ans, em_dsraykar.grad_w(w, mu, l)))
 
     def test_hess_w(self):
         x = np.array([[1, 2, 1], [0, 2, 2]])
@@ -72,11 +72,12 @@ class TestCalculations(unittest.TestCase):
                     (1 - mu[i])*l*cur_p*(1 - cur_p)*(1 - 2*cur_p)/((1 - cur_p)*l + (1 - l)*(1 - cur_q)) -
                     (1 - mu[i])*l*l*cur_p*cur_p*(1 - cur_p)*(1 - cur_p)/(((1 - cur_p)*l + (1 - l)*(1 - cur_q))*((1 - cur_p)*l + (1 - l)*(1 - cur_q))))
 
-        self.assertTrue(np.allclose(ans, em_dsraykar.hess_w(w, mu)))
+        self.assertTrue(np.allclose(ans, em_dsraykar.hess_w(w, mu, l)))
 
     def test_e_loglikelihood(self):
         x = np.array([[1, 2], [2, 3], [0, 1]])
         y = np.array([[0, 1], [1, 1], [0, 1]])
+        l = 0.3
 
         em_dsraykar = EM_DS_Raykar(y=y, x=x, l=0.3, y_real=None)
 
@@ -95,12 +96,12 @@ class TestCalculations(unittest.TestCase):
         assert(np.allclose(a, a_ans))
         assert(np.allclose(b, b_ans))
 
-        mus = em_dsraykar.update_mu(alpha, beta, w)
+        mus = em_dsraykar.update_mu(alpha, beta, w, l)
         ans_mu = [0.5399433, 0.997577, 0.464722]
         for i, mu in enumerate(mus):
             assert(abs(mu - ans_mu[i]) < 1e-4)
 
-        e_log = em_dsraykar.e_loglikelihood(alpha, beta, w, mus)
+        e_log = em_dsraykar.e_loglikelihood(alpha, beta, w, mus, l)
         e_log_ans = -3.65826624
         assert(abs(e_log - e_log_ans) < 1e-4)
 

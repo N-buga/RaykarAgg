@@ -28,7 +28,7 @@ class GradientDescentOptimizer(Optimizer):
     """
     Gradient descent optimization.
     """
-    def __init__(self, step=0.01, steps_count=50):
+    def __init__(self, step=0.00005, steps_count=150):
         """
         Set parameters for gradient descent.
         :param step: The value of step.
@@ -54,16 +54,16 @@ class GradientDescentOptimizer(Optimizer):
         :return: optimal value.
         """
         new_var = var.copy()
-        old_var = new_var
-        old_func_value = func(old_var)
+        # old_var = new_var
+        # old_func_value = func(old_var)
         for i in range(self.steps_count):
             new_var += self.step * grad_func(new_var)
-            new_func_value = func(new_var)
-            if new_func_value < old_func_value:
-                return old_var
-            else:
-                old_var = new_var
-                old_func_value = new_func_value
+            # new_func_value = func(new_var)
+            # if new_func_value < old_func_value:
+            #     return old_var
+            # else:
+            #     old_var = new_var
+            #     old_func_value = new_func_value
         return new_var
 
 

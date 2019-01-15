@@ -6,7 +6,7 @@ import numpy as np
 import time
 from em_DSraykar import EM_DS_Raykar
 from generate_data import generate_model_points, generate_DS_points
-from optimizers import GradientDescentOptimizer, NewtonOptimizer, ScipyOptimizer
+from func_optimizers import GradientDescentOptimizer, NewtonOptimizer, ScipyOptimizer
 
 
 class OptimizerTimeTest:

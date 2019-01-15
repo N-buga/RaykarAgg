@@ -1,16 +1,16 @@
 import numpy as np
 import pandas as pd
-from em_DSraykar import sigmoid
+from models import sigmoid
 
 
-def generate_AB_points(n, m, d, l,
+def generate_AB_points(n, m, d, l_parts,
                        alpha, beta,
                        random_state=0):
     np.random.seed(random_state)
     x = np.random.normal(size=(n, d))
     w = np.random.normal(size=(d,))
 
-    model = np.random.binomial(size=n, n=1, p=l)
+    model = np.random.binomial(size=n, n=1, p=l_parts)
     y_real_A = np.where(sigmoid(np.matmul(x, w)) > 0.5, np.ones((n,)), np.zeros((n,)))
     y_real_B = np.random.binomial(size=n, n=1, p=0.5)
     y_real = np.where(model == 1, y_real_A, y_real_B)
@@ -28,7 +28,9 @@ def generate_AB_points(n, m, d, l,
             y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=1-beta)
             y_workers[i] = y_all[i*m:(i + 1)*m, 2]
 
-    return x, y_workers, y_real, y_all, alpha, beta, w
+    l = (y_real == y_real_A).mean()
+
+    return x, y_workers, y_real, y_all, alpha, beta, w, l
 
 
 def generate_model_points(n, m, d,
@@ -51,7 +53,7 @@ def generate_model_points(n, m, d,
             y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=1-beta)
             y_workers[i] = y_all[i*m:(i + 1)*m, 2]
 
-    return x, y_workers, y_real, y_all, alpha, beta, w
+    return x, y_workers, y_real, y_all, alpha, beta, w, 1
 
 
 def generate_DS_points(n, m, d,
@@ -73,7 +75,7 @@ def generate_DS_points(n, m, d,
             y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=1-beta)
             y_workers[i] = y_all[i*m:(i + 1)*m, 2]
 
-    return x, y_workers, y_real, y_all, alpha, beta, None
+    return x, y_workers, y_real, y_all, alpha, beta, None, 0
 
 
 def generate_points(n, m, d, l,
@@ -103,7 +105,7 @@ def generate_points(n, m, d, l,
             y_all[i*m:(i + 1)*m, 2] = np.random.binomial(size=m, n=1, p=1-beta)
             y_workers[i] = y_all[i*m:(i + 1)*m, 2]
 
-    return x, y_workers, y_real, y_all, alpha, beta, w
+    return x, y_workers, y_real, y_all, alpha, beta, w, l
 
 
 def create_dfs(x, y_real, y_workers,

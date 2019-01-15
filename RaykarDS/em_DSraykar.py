@@ -1,5 +1,5 @@
 import numpy as np
-from optimizers import GradientDescentOptimizer
+from func_optimizers import GradientDescentOptimizer
 
 # N -- tasks, M -- max count of marks
 # y_i^j --> (N, M);
@@ -13,33 +13,26 @@ import sys
 EPS = 1e-8
 
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-
 # TODO: add l to docstring
 
 class EM_DS_Raykar:
-    def __init__(self, x, y, y_real, l=None, max_steps=200, verbose=False, optimizer=None):
+    def __init__(self, x, y, y_real, model, l=None, max_steps=200, verbose=False):
         """
         :param x: Features (N x D).
         :param y: Worker answers (N x M).
         :param y_real: Provide y_real for debug purposes.
+        :param model: Probability classification model. Contains hidden optimization parameter w.
         :param l: l that will be used. If no l are provided, l will be evaluated from other data.
         :param max_steps: Max count of EM-steps.
         :param verbose:
-        :param optimizer: Optimizer for w.
         """
         self.x = x
         self.y = y
+        self.model = model
         self.l = l
         self.max_steps = max_steps
         self.y_real = y_real
         self.verbose = verbose
-        if optimizer:
-            self.optimizer = optimizer
-        else:
-            self.optimizer = GradientDescentOptimizer()
 
     def a(self, alpha):
         """
@@ -48,6 +41,10 @@ class EM_DS_Raykar:
         :return: The a.
         """
         a = np.prod(np.power(alpha, self.y), axis=1) * np.prod(np.power(1 - alpha, 1 - self.y), axis=1)
+
+        a[a < EPS] = EPS
+        a[a > 1 - EPS] = 1 - EPS
+
         return a
 
     def b(self, beta):
@@ -56,11 +53,12 @@ class EM_DS_Raykar:
         :param beta:
         :return: The b.
         """
-        a = np.prod(np.power(beta, 1 - self.y), axis=1) * np.prod(np.power(1 - beta, self.y), axis=1)
-        return a
+        b = np.prod(np.power(beta, 1 - self.y), axis=1) * np.prod(np.power(1 - beta, self.y), axis=1)
 
-    def p(self, w):
-        return sigmoid(np.matmul(self.x, w))
+        b[b < EPS] = EPS
+        b[b > 1 - EPS] = 1 - EPS
+
+        return b
 
     def q(self):
         q = self.y.mean(axis=1)
@@ -68,103 +66,73 @@ class EM_DS_Raykar:
         q[q > 1 - EPS] = 1 - EPS
         return q
 
-    def initialize_values(self):
-        """
-        Initialization values of alpha, beta, mu, w, l.
-        :return: (alpha, beta, mu, w, l)
-        """
-        mu = np.mean(self.y, axis=1)
-        alpha = 0.5 * np.ones((self.y.shape[1],))
-        beta = 0.5 * np.ones((self.y.shape[1],))
-        w = np.zeros(self.x.shape[1])
-        l = 0.5 * np.ones((self.y.shape[0]))
-        return alpha, beta, w, mu, l
-
-    def grad_w(self, w, mu, l):
-        """
-        Gradient of w.
-        :param w: Weights in linear regression.
-        :param mu:
-        :param l:
-        :return:
-        """
-        p = self.p(w)
-        p[p < EPS] = EPS
-        p[p + EPS > 1] = 1 - EPS
-        q = self.q()
-        q[q < EPS] = EPS
-        q[q + EPS > 1] = 1 - EPS
-
-        if self.l is None:
-            ll = l
-        else:
-            ll = self.l
-
-        koeff = p * (1 - p) * (mu * ll / (p * ll + q * (1 - ll)) - (1 - mu) * ll / (1 - p * ll - q * (1 - ll)))
-        return np.squeeze(np.matmul(koeff[None, :], self.x))
-
-    def hess_w(self, w, mu, l):
-        """
-        Hessian of w.
-        :param w: Weights in linear regression.
-        :param mu:
-        :param l:
-        :return: (d x d) np array.
-        """
-
+    def p1(self, l):
         if self.l is not None:
             ll = self.l
         else:
             ll = l
 
-        trans_x = np.transpose(self.x)
-        p = self.p(w)
-        q = self.q()
-        denom1 = (p * ll + q * (1 - ll))
-        denom2 = (1 - p * ll - q * (1 - ll))
-        numer1 = ll * p * (1 - p) * (1 - 2 * p)
-        numer2 = ll * ll * p * p * (1 - p) * (1 - p)
-        koeff = mu * numer1 / denom1 - mu * numer2 / (denom1 * denom1) - \
-                (1 - mu) * numer1 / denom2 - (1 - mu) * numer2 / (denom2 * denom2)
-        x_with_values = np.transpose(koeff * trans_x)
-        ans = np.dot(trans_x[None, :, :], x_with_values[None, :, :])
-        ans_sq = np.squeeze(ans)
-        return ans_sq
+        return ll * self.model.p() + (1 - ll) * self.q()
 
-    def update_vars(self, w, mu, l):
+    def initialize_values(self):
+        """
+        Initialization values of alpha, beta, mu, w, l.
+        :return: (alpha, beta, mu, w, l)
+        """
+        mu = self.y.mean(axis=1)
+        mu[mu < 0.5] = 1 - mu[mu < 0.5]
+        mu[mu > 1 - EPS] = 1 - EPS
+        alpha = 0.5 * np.ones((self.y.shape[1],))
+        beta = 0.5 * np.ones((self.y.shape[1],))
+        self.model.init_model(x=self.x, y=self.y)
+        l = 0.5 * np.ones((self.y.shape[0]))
+        return alpha, beta, mu, l
+
+    def update_vars(self, mu, l):
+        if self.l is not None:
+            ll = self.l
+        else:
+            ll = l
+
         new_alpha = np.matmul(np.transpose(self.y), mu) / (mu.sum())
         new_beta = np.matmul((1 - np.transpose(self.y)), (1 - mu)) / ((1 - mu).sum())
-
-        new_w = self.optimizer.optimize(
-            w,
-            func=lambda var: self.e_loglikelihood(alpha=new_alpha, beta=new_beta, w=var, mu=mu, l=l),
-            grad_func=lambda var: self.grad_w(w=var, mu=mu, l=l),
-            hess_func=lambda var: self.hess_w(w=var, mu=mu, l=l)
+        self.model.update_w(
+            self.a(new_alpha),
+            self.b(new_beta),
+            q=self.q(),
+            e_loglikelihood=lambda p: self.e_loglikelihood(
+                alpha=new_alpha,
+                beta=new_beta,
+                p=p,
+                mu=mu,
+                l=ll
+            ),
+            mu=mu,
+            l=ll
         )
+
         q = self.q()
-        p = self.p(new_w)
+        p = self.model.p()
 
         ind_change = abs(q - p) > EPS
 
         new_l = l.copy()
         new_l[ind_change] = (q[ind_change] - mu[ind_change]) / (q[ind_change] - p[ind_change])
 
-        wrong_l = np.logical_or(new_l < 0, new_l > 1)
-        new_l[wrong_l] = l[wrong_l]
+        # wrong_l = np.logical_or(new_l < 0, new_l > 1)
+        # new_l[wrong_l] = l[wrong_l]
 
-        return new_alpha, new_beta, new_w, new_l
+        l_less0 = new_l <= EPS
+        l_more1 = new_l >= 1 - EPS
+        new_l[l_less0] = EPS
+        new_l[l_more1] = 1 - EPS
 
-    def e_loglikelihood(self, alpha, beta, w, mu, l):
+        return new_alpha, new_beta, new_l
+
+    def e_loglikelihood(self, alpha, beta, p, mu, l):
         a = self.a(alpha)
         b = self.b(beta)
-        a[a < EPS] = EPS
-        b[b < EPS] = EPS
-        p = self.p(w)
-        p[p < EPS] = EPS
-        p[p + EPS > 1] = 1 - EPS
         q = self.q()
-        q[q < EPS] = EPS
-        q[q + EPS > 1] = 1 - EPS
 
         if self.l is not None:
             ll = self.l
@@ -184,10 +152,10 @@ class EM_DS_Raykar:
     #     return (mu*np.log(a) + mu*np.log(p*self.l) + (1 - mu)*np.log(b) + \
     #            (1 - mu)*np.log((1 - p)*self.l)).sum()
 
-    def update_mu(self, alpha, beta, w, l):
+    def update_mu(self, alpha, beta, l):
         a = self.a(alpha)
         b = self.b(beta)
-        p = self.p(w)
+        p = self.model.p()
         q = self.q()
 
         if self.l is not None:
@@ -195,39 +163,44 @@ class EM_DS_Raykar:
         else:
             ll = l
 
-        return a * p / (a * p + b * (1 - p)) * ll + a * q / (a * q + b * (1 - q)) * (1 - ll)
+        new_mu = a * p / (a * p + b * (1 - p)) * ll + a * q / (a * q + b * (1 - q)) * (1 - ll)
 
-    def em_step(self, alpha, beta, w, mu, l):
-        new_mu = self.update_mu(alpha, beta, w, l)
-        new_alpha, new_beta, new_w, new_l = self.update_vars(w, new_mu, l)
-        return new_alpha, new_beta, new_w, new_mu, new_l
+        new_mu[new_mu < EPS] = EPS
+        new_mu[new_mu > 1 - EPS] = 1 - EPS
+
+        return new_mu
+
+    def em_step(self, alpha, beta, mu, l):
+        new_mu = self.update_mu(alpha, beta, l)
+        new_alpha, new_beta, new_l = self.update_vars(new_mu, l)
+        return new_alpha, new_beta, new_mu, new_l
 
     def em_algorithm(self):
-        alpha, beta, w, mu, l = self.initialize_values()
-        alpha, beta, w, l = self.update_vars(w, mu, l)
-        exp_old = self.e_loglikelihood(alpha, beta, w, mu, l)
-        alpha, beta, w, mu, l = self.em_step(alpha, beta, w, mu, l)
-        exp_new = self.e_loglikelihood(alpha, beta, w, mu, l)
+        alpha, beta, mu, l = self.initialize_values()
+        alpha, beta, l = self.update_vars(mu, l)
+        exp_old = self.e_loglikelihood(alpha, beta, self.model.p(), mu, l)
+        alpha, beta, mu, l = self.em_step(alpha, beta, mu, l)
+        exp_new = self.e_loglikelihood(alpha, beta, self.model.p(), mu, l)
 
         step = 0
         if self.verbose:
-            self.out(step, alpha, beta, w, mu, exp_new)
+            self.out(step, alpha, beta, mu, exp_new)
         while exp_new - exp_old > 0:
             if self.verbose:
                 print("\nDiff = {}\n".format(exp_new - exp_old))
-            alpha, beta, w, mu, l = self.em_step(alpha, beta, w, mu, l)
+            alpha, beta, mu, l = self.em_step(alpha, beta, mu, l)
             exp_old = exp_new
-            exp_new = self.e_loglikelihood(alpha, beta, w, mu, l)
+            exp_new = self.e_loglikelihood(alpha, beta, self.model.p(), mu, l)
             step += 1
             if self.verbose:
-                self.out(step, alpha, beta, w, mu, exp_new)
+                self.out(step, alpha, beta, mu, exp_new)
 
             if step > self.max_steps:
                 break
 
-        return alpha, beta, w, mu, l
+        return alpha, beta, self.model.get_w(), self.p1(l), l
 
     @staticmethod
-    def out(step, alpha, beta, w, mu, exp_new):
+    def out(step, alpha, beta, mu, exp_new):
         print("--------------------\nStep={}\nlog E={}\n"
               .format(step, np.exp(exp_new / mu.shape[0])), sys.stderr)

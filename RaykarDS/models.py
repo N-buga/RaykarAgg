@@ -2,6 +2,8 @@ import numpy as np
 from keras.optimizers import SGD
 
 from keras import backend as K
+from scipy import sparse
+
 from em_DSraykar import EPS
 from keras.models import Sequential
 from keras.layers.core import Flatten, Dense, Dropout
@@ -44,6 +46,7 @@ class LogisticRegressionModel(Model):
 
     def init_model(self, x, y):
         self.x = x
+        self.sparse_x = sparse.csc_matrix(self.x)
         self.y = y
         self.w = np.zeros((self.x.shape[1]))
 
@@ -63,7 +66,7 @@ class LogisticRegressionModel(Model):
         :param w:
         :return:
         """
-        p = sigmoid(np.matmul(self.x, w))
+        p = sigmoid(self.sparse_x.dot(w))
         p[p < EPS] = EPS
         p[p + EPS > 1] = 1 - EPS
         return p
@@ -88,7 +91,12 @@ class LogisticRegressionModel(Model):
         else:
             raise AttributeError("Wrong reg type")
 
-        return np.squeeze(np.matmul(koeff[None, :], self.x)) - reg
+        # dense_res = np.squeeze(np.matmul(koeff[None, :], self.x)) - self.x.shape[0]*reg
+        sparse_res = np.squeeze(self.sparse_x.transpose().dot(koeff[None, :].transpose()).transpose()) - self.x.shape[0]*reg
+
+        # assert np.allclose(dense_res, sparse_res)
+
+        return sparse_res
 
     def hess_w(self, q, w, mu, l):
         """
@@ -118,7 +126,7 @@ class LogisticRegressionModel(Model):
         else:
             raise AttributeError("Wrong reg type")
 
-        return ans_sq - reg
+        return ans_sq - self.x.shape[0]*reg
 
     def update_w(self, a, b, q, e_loglikelihood, mu, l):
         new_w = self.optimizer.optimize(

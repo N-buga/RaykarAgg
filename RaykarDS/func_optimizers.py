@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 
+
 class Optimizer:
     """
     Base class.
@@ -28,7 +29,7 @@ class GradientDescentOptimizer(Optimizer):
     """
     Gradient descent optimization.
     """
-    def __init__(self, step=0.00005, steps_count=150):
+    def __init__(self, step=0.0001, steps_count=150):  # Simulated: step=0.00005, steps_count=150
         """
         Set parameters for gradient descent.
         :param step: The value of step.

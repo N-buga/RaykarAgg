@@ -116,14 +116,6 @@ class ChenData:
         if size is None:
             size = self.X.shape[0]
 
-        if marks_percentage is None:
-            cnt_marks = (~np.isnan(self.y)).sum()
-        else:
-            cnt_marks = int(marks_percentage*(~np.isnan(self.y)).sum()//100)
-
-        assert (size*at_least <= cnt_marks)
-        assert (cnt_marks <= (~np.isnan(self.y)).sum())
-
         index_to_take = self.gold_tasks_index
         cnt_more_take = size - index_to_take.shape[0]
 
@@ -138,6 +130,14 @@ class ChenData:
             cur_marks_to_take = \
                 np.random.choice(np.argwhere(~np.isnan(boot_y[i, :])).squeeze(), cnt_to_take, replace=False).tolist()
             marks_to_take += [i*boot_y.shape[1] + cur_mark_to_take for cur_mark_to_take in cur_marks_to_take]
+
+        if marks_percentage is None:
+            cnt_marks = (~np.isnan(boot_y)).sum()
+        else:
+            cnt_marks = int(marks_percentage*(~np.isnan(self.y)).sum()//100)
+
+        assert (size*at_least <= cnt_marks)
+        assert (cnt_marks <= (~np.isnan(boot_y)).sum())
 
         flatten_boot_y = boot_y.flatten()
         flatten_boot_y[marks_to_take] = None
@@ -168,3 +168,11 @@ if __name__ == '__main__':
     lr.fit(chendata.X[chendata.gold_tasks_index], chendata.y_real[chendata.gold_tasks_index])
     print(
         ((lr.predict(chendata.X[chendata.gold_tasks_index]) > 0.5).astype(int) == chendata.y_real[chendata.gold_tasks_index]).mean())
+
+    _, boot_y, _ = chendata.bootstrap(400*chendata.X.shape[0])
+    cnt_matches = 0
+    for i in range(boot_y.shape[0]):
+        inds = np.random.choice(np.argwhere(~np.isnan(boot_y[i, :])).squeeze(), 2, replace=False).tolist()
+        cnt_matches += (boot_y[i, inds[0]] == boot_y[i, inds[1]])
+
+    print("Agreement: {}".format(cnt_matches/boot_y.shape[0]))

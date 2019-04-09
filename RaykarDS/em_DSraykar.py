@@ -28,6 +28,10 @@ class EM_DS_Raykar:
         """
         self.x = x
         self.y = y
+
+        self.y_nan0 = np.nan_to_num(self.y)
+        self.y_nan1 = np.where(np.isnan(self.y), 1, self.y)
+
         self.model = model
         self.l = l
         self.max_steps = max_steps
@@ -41,9 +45,7 @@ class EM_DS_Raykar:
         :return: The a.
         """
 
-        y_nan0 = np.nan_to_num(self.y)
-        y_nan1 = np.where(np.isnan(self.y), 1, self.y)
-        a = np.prod(np.power(alpha, y_nan0), axis=1) * np.prod(np.power(1 - alpha, 1 - y_nan1), axis=1)
+        a = np.prod(np.power(alpha, self.y_nan0), axis=1) * np.prod(np.power(1 - alpha, 1 - self.y_nan1), axis=1)
 
         a[a < EPS] = EPS
         a[a > 1 - EPS] = 1 - EPS
@@ -57,9 +59,7 @@ class EM_DS_Raykar:
         :return: The b.
         """
 
-        y_nan0 = np.nan_to_num(self.y)
-        y_nan1 = np.where(np.isnan(self.y), 1, self.y)
-        b = np.prod(np.power(beta, 1 - y_nan1), axis=1) * np.prod(np.power(1 - beta, y_nan0), axis=1)
+        b = np.prod(np.power(beta, 1 - self.y_nan1), axis=1) * np.prod(np.power(1 - beta, self.y_nan0), axis=1)
 
         b[b < EPS] = EPS
         b[b > 1 - EPS] = 1 - EPS
@@ -85,13 +85,17 @@ class EM_DS_Raykar:
         Initialization values of alpha, beta, mu, w, l.
         :return: (alpha, beta, mu, w, l)
         """
-        mu = np.nanmean(self.y, axis=1)
-        mu[mu < 0.5] = 1 - mu[mu < 0.5]
-        mu[mu > 1 - EPS] = 1 - EPS
-        alpha = 0.5 * np.ones((self.y.shape[1],))
-        beta = 0.5 * np.ones((self.y.shape[1],))
+        # mu = np.nanmean(self.y, axis=1)
+        # mu[mu < 0.5] = 1 - mu[mu < 0.5]
+        # mu[mu > 1 - EPS] = 1 - EPS
+
+        alpha = 0.6 * np.ones((self.y.shape[1],))
+        beta = 0.6 * np.ones((self.y.shape[1],))
         self.model.init_model(x=self.x, y=self.y)
         l = 0.5 * np.ones((self.y.shape[0])) #np.zeros((self.y.shape[0]))
+
+        mu = self.update_mu(alpha, beta, l)
+
         return alpha, beta, mu, l
 
     def update_vars(self, mu, l):
@@ -103,8 +107,8 @@ class EM_DS_Raykar:
         mu_nan0 = np.where(np.transpose(~np.isnan(self.y)), mu, 0)
         mu_nan1 = np.where(np.transpose(~np.isnan(self.y)), mu, 1)
 
-        new_alpha = np.matmul(np.transpose(np.nan_to_num(self.y)), mu) / (mu_nan0.sum(axis=1))
-        new_beta = np.matmul((1 - np.transpose(np.nan_to_num(self.y))), (1 - mu)) / ((1 - mu_nan1).sum(axis=1))
+        new_alpha = np.matmul(np.transpose(self.y_nan0), mu) / (mu_nan0.sum(axis=1))
+        new_beta = np.matmul((1 - np.transpose(self.y_nan1)), (1 - mu)) / ((1 - mu_nan1).sum(axis=1))
         self.model.update_w(
             self.a(new_alpha),
             self.b(new_beta),

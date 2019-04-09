@@ -1,5 +1,4 @@
 import argparse
-import pandas as pd
 import numpy as np
 
 from em_DSraykar import EM_DS_Raykar

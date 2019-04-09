@@ -44,6 +44,7 @@ def run_ds_reykar(crowd_data, tasks_data, worker_column, task_column, worker_ans
     print("Error after update mu: {}".format((abs(mu - real_mu)).mean()))
     print("Elog after update mu: {}".format(em_ds_raykar.e_loglikelihood(alpha, beta, real_w, mu)))
 
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-cf', '--crowd-filepath',

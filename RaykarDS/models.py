@@ -92,8 +92,10 @@ class LogisticRegressionModel(Model):
             raise AttributeError("Wrong reg type")
 
         # dense_res = np.squeeze(np.matmul(koeff[None, :], self.x)) - self.x.shape[0]*reg
-        sparse_res = np.squeeze(self.sparse_x.transpose().dot(koeff[None, :].transpose()).transpose()) - self.x.shape[0]*reg
+        sparse_res = np.squeeze(self.sparse_x.transpose().dot(koeff[None, :].transpose()).transpose()) - reg*self.x.shape[0]
 
+        # pass
+        # assert (sparse_res == reg).all()
         # assert np.allclose(dense_res, sparse_res)
 
         return sparse_res

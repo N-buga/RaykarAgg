@@ -43,7 +43,7 @@ class GradientDescentOptimizer(Optimizer):
         Return string description of optimizer
         :return:
         """
-        return "GradientDescentOptimizer step={}; steps_count={}".format(self.step, self.steps_count)
+        return "AdaGradOptimizer step={}; steps_count={}".format(self.step, self.steps_count)
 
     def optimize(self, var, func, grad_func, hess_func=None):
         """
@@ -59,6 +59,60 @@ class GradientDescentOptimizer(Optimizer):
         # old_func_value = func(old_var)
         for i in range(self.steps_count):
             new_var += self.step * grad_func(new_var)
+
+            # new_func_value = func(new_var)
+            # if new_func_value < old_func_value:
+            #     return old_var
+            # else:
+            #     old_var = new_var
+            #     old_func_value = new_func_value
+        return new_var
+
+
+class AdaGradOptimizer(Optimizer):
+    """
+    AdaGrad optimization.
+    """
+    def __init__(self, step=0.0001, steps_count=150, eps=0.1):  # Simulated: step=0.00005, steps_count=150
+        """
+        Set parameters for gradient descent.
+        :param step: The value of step.
+        :param steps_count:
+        :param eps: Smoothing coefficient of AdaGrad.
+        """
+        self.step = step
+        self.steps_count = steps_count
+        self.eps = eps
+
+    def description(self):
+        """
+        Return string description of optimizer
+        :return:
+        """
+        return "GradientDescentOptimizer step={}; steps_count={}".format(self.step, self.steps_count)
+
+    def optimize(self, var, func, grad_func, hess_func=None):
+        """
+        Maximise the function with var start point.
+        :param var: start value
+        :param func: Function which we maximise.
+        :param grad_func: Gradient function.
+        :param hess_func: The hessian of function. Isn't necessary to provide.
+        :return: optimal value.
+        """
+        new_var = var.copy()
+        # old_var = new_var
+        # old_func_value = func(old_var)
+
+        G = self.eps * np.ones((new_var.shape[0],))
+
+        for i in range(self.steps_count):
+            cur_grad = grad_func(new_var)
+            G += cur_grad * cur_grad
+
+            new_var += self.step / np.sqrt(G) * cur_grad
+
+
             # new_func_value = func(new_var)
             # if new_func_value < old_func_value:
             #     return old_var
@@ -109,7 +163,8 @@ class NewtonOptimizer(Optimizer):
                     new_var -= self.step * np.matmul(np.linalg.inv(hess_func(new_var)), grad_func(new_var))
             except np.linalg.LinAlgError:
                 new_var += self.step * self.step * grad_func(new_var)
-            # new_func_value = func(new_var)
+
+                # new_func_value = func(new_var)
             # if new_func_value < old_func_value:
             #     return old_var
             # else:

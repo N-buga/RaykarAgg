@@ -102,20 +102,61 @@ class ChenData:
 
         pass
 
-    def bootstrap(self, size=None, seed=0):
+    def bootstrap(self, size=None, marks_percentage=None, at_least=1, seed=0):
+        """
+        Choose uniformly <size> tasks and <cnt_marks> so that each task would have at least <at_least> marks. If for some
+        task there are less marks then <at_least> all marks will be taken.
+
+        :param size:
+        :param cnt_marks:
+        :param at_least:
+        :param seed: Seed of random.
+        :return: Numpy array of tasks' features, workers marks and real answer.
+        """
         if size is None:
             size = self.X.shape[0]
 
-        index_to_take = np.squeeze(self.gold_tasks_index)
+        if marks_percentage is None:
+            cnt_marks = (~np.isnan(self.y)).sum()
+        else:
+            cnt_marks = int(marks_percentage*(~np.isnan(self.y)).sum()//100)
+
+        assert (size*at_least <= cnt_marks)
+        assert (cnt_marks <= (~np.isnan(self.y)).sum())
+
+        index_to_take = self.gold_tasks_index
         cnt_more_take = size - index_to_take.shape[0]
 
         np.random.seed(seed)
         index_to_take = np.concatenate((index_to_take, np.random.choice(list(range(self.X.shape[0])), cnt_more_take)))
 
         boot_y = self.y[index_to_take]
-        workers_with_answers = np.argwhere(~np.isnan(boot_y).all(axis=0)).squeeze()
 
-        return self.X[index_to_take], boot_y[:, workers_with_answers], self.y_real[index_to_take]
+        marks_to_take = []
+        for i in range(boot_y.shape[0]):
+            cnt_to_take = min((~np.isnan(boot_y[i, :])).sum(), at_least)
+            cur_marks_to_take = \
+                np.random.choice(np.argwhere(~np.isnan(boot_y[i, :])).squeeze(), cnt_to_take, replace=False).tolist()
+            marks_to_take += [i*boot_y.shape[1] + cur_mark_to_take for cur_mark_to_take in cur_marks_to_take]
+
+        flatten_boot_y = boot_y.flatten()
+        flatten_boot_y[marks_to_take] = None
+
+        more_marks_to_take = cnt_marks - len(marks_to_take)
+
+        marks_to_take += np.random.choice(np.argwhere(~np.isnan(flatten_boot_y)).squeeze(), more_marks_to_take, replace=False).tolist()
+
+        worse_boot_y_flatten = np.empty((flatten_boot_y.shape[0],))
+        worse_boot_y_flatten[:] = None
+        worse_boot_y_flatten[marks_to_take] = boot_y.flatten()[marks_to_take]
+
+        worse_boot_y = worse_boot_y_flatten.reshape(boot_y.shape)
+
+        assert ((~np.isnan(worse_boot_y)).sum() == cnt_marks)
+
+        workers_with_answers = np.argwhere(~np.isnan(worse_boot_y).all(axis=0)).squeeze()
+
+        return self.X[index_to_take], worse_boot_y[:, workers_with_answers], self.y_real[index_to_take]
 
 
 if __name__ == '__main__':

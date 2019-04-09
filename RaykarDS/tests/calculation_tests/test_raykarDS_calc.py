@@ -112,5 +112,6 @@ class TestLogRegressionCalculations(unittest.TestCase):
         e_log_ans = -3.65826624
         assert(abs(e_log - e_log_ans) < 1e-4)
 
+
 if __name__ == '__main__':
     unittest.main()

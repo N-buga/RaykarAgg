@@ -1,0 +1,104 @@
+\documentclass[12 pt]{article}
+\usepackage[margin = 1cm]{geometry}
+\usepackage [utf8]{inputenc}
+\usepackage[T2A]{fontenc}
+\usepackage[russian]{babel}
+\usepackage{dsfont }
+\usepackage{amsthm, amsmath, amssymb}
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+\begin{document}
+{\bf По Рэйкару (model A):}
+\[\ln Pr(D | \theta) = \sum\limits_{i = 1}^N \ln (a_i p_i + b_i (1 - p_i))\], где 
+\begin{itemize}
+	\item $a_i = \prod\limits_{j = 1}^R \alpha_j^{y_i^j}(1 - \alpha_j)^{1 - y_i^j}$
+	\item $b_i = \prod\limits_{j = 1}^R (\beta_j)^{1 - y_i^j}(1 - \beta_j)^{y_i^j}$
+	\item $\alpha_j = Pr[y^j = 1 | y = 1]$
+	\item $\beta_j = Pr[y^j = 0 | y = 0]$
+	\item $p_i = Pr(y = 1 | x, w, H) $
+\end{itemize}
+
+\[Pr(D | \theta) = \prod\limits_{i = 1}^N (a_ip_i + b_i(1 - p_i))\]
+\[E_{y} \ln Pr(D | \theta) = \sum\limits_{i = 1}^N \mu_i\ln (a_ip_i) + (1 - \mu_i)\ln (b_i(1 - p_i))\]
+\[\mu_i = Pr[y_i = 1 | y_i^j, x_i, \theta] \]
+
+{\bf По DS (model B):}
+\[ln Pr(D) = \sum\limits_{j = 1}^n \sum\limits_{i = 1}^m \sum\limits_{g = 1}^k [z_{ij} == g] \ln (c_{iy_jg}) = \sum\limits_{j = 1}^n \sum\limits_{i = 1}^m \ln (c_{iy_jz_{ij}}) \], где $i$ -- работник, $j$ -- задание, $y_j$ -- настоящая метка, $z_{ij}$ -- метка работника.
+
+По обозначениям, $\alpha_j = c_{j11}$, $(1 - \alpha_j) = c_{j10}$, $\beta_j = c_{j00}$, $(1 - \beta_j) = c_{j01}$.
+
+Таким образом, 
+\[Pr(D, y | \theta) = P(D | y, \theta) P(y) = \prod\limits_{j = 1}^n \prod\limits_{i = 1}^m ((\alpha_j)^{y_i^j} (1 - \alpha_j)^{1 - y_i^j}P(y_j == 1))^{[y_j == 1]}((\beta_j)^{1 - y_i^j}(1 - \beta_j)^{y_i^j})Pr(y_j == 0))^{[y_j == 0]}\]
+\[\ln Pr(D, y) = \sum\limits_{j = 1}^n \sum\limits_{i = 1}^m \ln (((\alpha_j)^{y_i^j} (1 - \alpha_j)^{1 - y_i^j}P(y_j == 1))^{[y_j == 1]} ((\beta_j)^{1 - y_i^j}(1 - \beta_j)^{y_i^j}P(y_j == 0))^{[y_j == 0]}) \]
+
+\[E_{y} \ln Pr(D, y) = \sum\limits_{j = 1}^n \sum\limits_{i = 1}^m \mu_j \ln ((\alpha_j)^{y_i^j} (1 - \alpha_j)^{1 - y_i^j}P(y_j == 1)) + (1 - \mu_j)\ln((\beta_j)^{1 - y_i^j}(1 - \beta_j)^{y_i^j}P(y_j == 0)) = \]
+\[ = \sum\limits_{j = 1}^n \mu_j \ln a_j + \mu_j \ln P(y_j == 1) + (1 - \mu_j) \ln b_j + (1 - \mu_j) P(y_j == 0) = \]
+\[= \sum\limits_{i = 1}^N \mu_i \ln a_i + \mu_i \ln P(y_i == 1) + (1 - \mu_i) \ln b_i  + (1 - \mu_i) P(y_i == 0) \]
+
+\begin{itemize}
+	\item $q_i = P(y_i == 1)$
+\end{itemize}
+
+{\bf Смесь:}
+\[ P(\theta | D) = \prod\limits_{i = 1}^N P(\theta | X_i) = \prod\limits_{i = 1}^N (P(\theta | A, X_i) P(A | X_i) + P(\theta | B, X_i) P(B | X_i)) = \]
+\[ = \prod\limits_{i = 1}^N  \left(\frac{P_A(X_i | \theta) P_A(\theta)}{P_A(X_i)} P(A | X_i) + \frac{P_B(X_i | \theta) P_B(\theta)}{P_B(X_i)} P(B | X_i)\right)\] 
+Если $P_A(\theta) = P_B(\theta) \sim Uni$ и $P_A(X_i) = P_B(X_i)$, то:
+\[\theta_{MAP} = \arg \max\limits_{\theta}  \prod\limits_{i = 1}^N \left(\frac{P_A (X_i | \theta) P_A(\theta)}{P_A(X_i)} P(A | X_i) + \frac{P_B(X_i | \theta) P_B(\theta)}{P_B(X_i)} P(B | X_i)\right)  = \]
+\[ = \arg \max\limits_{\theta} \prod\limits_{i = 1}^N \left(P_A (X_i | \theta) P(A | X_i) + P_B(X_i | \theta) P(B | X_i)\right)\]
+let $P(A | X_i) = \lambda_i$ и $P(B | X_i) = 1 - \lambda_i$.
+\[\theta_{MAP} = \arg \max\limits_{\theta} \prod\limits_{i = 1}^N \left(\lambda_i P_A(X_i | \theta) + (1 - \lambda_i)P_B(X_i | \theta)\right)\]
+\[P(\theta, y | D) \propto \prod\limits_{i = 1}^N \left(P_A(X_i, y_i | \theta) P(A, y_i | X_i) + P(B, y_i | X_i) P_B(X_i, y_i | \theta)\right) = \]
+\[ = \prod\limits_{i = 1}^N ((a_ip_i)^{[y_i == 1]} (b_i(1 - p_i))^{[y_i == 0]}P(A, y_i | X_i) + (a_iq_i)^{[y_i == 1]}(b_i(1 - q_i))^{[y_i == 0]}P(B, y_i | X_i)) = \]
+
+\[\log P(\theta, y | D) = \sum\limits_{i = 1}^N \log ((a_ip_i)^{[y_i == 1]} (b_i(1 - p_i))^{[y_i == 0]}P(A, y_i | X_i) + (a_iq_i)^{[y_i == 1]}(b_i(1 - q_i))^{[y_i == 0]}P(B, y_i | X_i))\]
+
+\[E_y \log P(\theta, y | D) = \sum\limits_{i = 1}^N \mu_i  \log (a_ip_i P(A | X_i) + a_iq_iP(B | X_i)) + (1 - \mu_i)  \log (b_i(1 - p_i)P(A | X_i) + b_i(1 - q_i)P(B | X_i)) = \]
+\[ = \sum\limits_{i = 1}^N \mu_i  \log (a_ip_i \lambda_i + a_iq_i(1 - \lambda_i)) + (1 - \mu_i)  \log (b_i(1 - p_i)\lambda_i + b_i(1 - q_i)(1 - \lambda_i)) = \]
+\[ = \sum\limits_{i = 1}^N \mu_i  \log a_i + \mu_i\log(p_i \lambda_i + q_i(1 - \lambda_i)) + (1 - \mu_i)  \log (b_i) + (1 - \mu_i)\log((1 - p_i)\lambda_i + (1 - q_i)(1 - \lambda_i)) = \]
+\[ = \sum\limits_{i = 1}^N \mu_i  \log a_i + \mu_i\log(p_i \lambda_i + q_i(1 - \lambda_i)) + (1 - \mu_i)  \log (b_i) + (1 - \mu_i)\log(1 - p_i\lambda_i - q_i(1 - \lambda_i))\]
+
+\begin{itemize}
+	\item $p_i = \sigma(w^T x_i)$
+	\item $q_i$ -- количество единичек в массиве/априорное распределение
+\end{itemize}
+
+\[\frac{d E_y \log P(\theta, y | D)}{d \alpha^j} = (\sum\limits_{i = 1}^N \mu_i (y_i^j \log \alpha^j + (1 - y_i^j) \log (1 - \alpha^j)))'_{\alpha^j} = \sum\limits_{i = 1}^N \mu_i \left(\frac{y_i^j}{\alpha^j} - \frac{1 - y_i^j}{1 - \alpha^j}\right) = \]
+\[ = \sum\limits_{i = 1}^N \mu_i\left(\frac{y_i^j - \alpha^j}{\alpha^j(1 - \alpha^j)}\right)\]
+
+\[\frac{d E_y \log P(\theta, y | D)}{d \alpha^j} = 0 \Rightarrow \alpha^j = \frac{\sum\limits_{i = 1}^N \mu_i y_i^j}{\sum\limits_{i = 1}^N \mu_i}\]
+
+\[\beta_j = \frac{\sum\limits_{i = 1}^N (1 - \mu_i)(1 - y_i^j)}{\sum\limits_{i = 1}^N (1 - \mu_i)}\]
+
+\[\frac{d E_y \log P(\theta, y | D)}{d \lambda_i} = \mu_i \frac{p_i - q_i}{p_i\lambda_i + q_i(1 - \lambda_i)} + (1 - \mu_i)\frac{q_i - p_i}{1 - p_i\lambda_i - q_i(1 - \lambda_i)} = 0\]
+
+\[ \mu_i \frac{1}{p_i\lambda_i + q_i(1 - \lambda_i)} - (1 - \mu_i)\frac{1}{1 - p_i\lambda_i - q_i(1 - \lambda_i)} = 0\]
+
+\[\mu_i(1 - p_i\lambda_i - q_i + q_i\lambda_i) - (1 - \mu_i)(p_i\lambda_i + q_i - q_i\lambda_i) = \mu_i - p_i\mu_i\lambda_i - \mu_iq_i + \mu_iq_i\lambda_i - p_i\lambda_i - q_i + q_i\lambda_i + \mu_ip_i\lambda_i + \mu_iq_i - \mu_iq_i\lambda_i = 0\]
+
+\[\mu_i - p_i\lambda_i - q_i + q_i\lambda_i = 0 \]
+\[\lambda_i = \frac{q_i - \mu_i}{q_i - p_i}\]
+
+\[\frac{d E_y \log P(\theta, y | D)}{d w_k} = \sum\limits_{i = 1}^N \mu_i\frac{\lambda_i}{p_i\lambda_i + q_i(1 - \lambda_i)}(p_i)'_{w_k} + (1 - \mu_i)\frac{-\lambda_i}{1 - p_i\lambda_i - q_i(1 - \lambda_i)}(p_i)'_{w_k}\]
+
+\[\frac{d E_y \log P(\theta, y | D)}{d^2 w_k w_j} = \sum\limits_{i = 1}^N (\mu_i\frac{\lambda_i}{p_i\lambda_i + q_i(1 - \lambda_i)}(p_i)'_{w_k})'_{w_j} + ((1 - \mu_i)\frac{-\lambda_i}{1 - p_i\lambda_i - q_i(1 - \lambda_i)}(p_i)'_{w_k})'_{w_j} = \]
+\[ = \sum\limits_{i = 1}^N \mu_i\lambda_i\frac{-1}{(p_i\lambda_i + q_i(1 - \lambda_i))^2}\lambda_i(p_i)'_{w_j}(p_i)'_{w_k} + \mu_i\lambda_i\frac{1}{p_i\lambda_i + q_i(1 - \lambda_i)}(p_i)''_{w_k, w_j} + \]
+\[ + (1 - \mu_i)(-\lambda_i)\frac{-1}{(1 - p_i\lambda_i - q_i(1 - \lambda_i))^2}(-\lambda_i)(p_i)'_{w_j}(p_i)'_{w_k} + (1 - \mu_i)(-\lambda_i)\frac{1}{1 - p_i\lambda_i - q_i(1 - \lambda_i)}(p_i)''_{w_k, w_j} \]
+
+\[\mu_i = \frac{a_ip_i}{a_ip_i + b_i(1 - p_i)}\lambda_i + \frac{a_iq_i}{a_iq_i + b_i(1 - q_i)}(1 - \lambda_i)\]
+
+\begin{itemize}
+\item  Если $p_i = \sigma(w^T x_i)$,  то 
+\[(p_i)'_{w} = p_i(1 - p_i)x_i\]
+\[(p_i)''_{w} = p_i(1 - p_i)(1 - 2p_i)x_ix_i^T\]
+
+\[\frac{d E_y \log P(\theta, y | D)}{d w} = \sum\limits_{i = 1}^N \mu_i\frac{\lambda_i}{p_i\lambda_i + q_i(1 - \lambda_i)}p_i(1 - p_i)x_i + (1 - \mu_i)\frac{-\lambda_i}{1 - p_i\lambda_i - q_i(1 - \lambda_i)}p_i(1 - p_i)x_i\]
+
+\[\frac{d E_y \log P(\theta, y | D)}{d^2 w} = \sum\limits_{i = 1}^N \frac{\mu_i\lambda_i p_i(1 - p_i)(1 - 2p_i)}{p_i\lambda_i + q_i(1 - \lambda_i)}x_ix_i^T - \frac{\mu_i\lambda_i^2p_i^2(1 - p_i)^2}{(p_i\lambda_i + q_i(1 - \lambda_i))^2}x_ix_i^T - \]
+\[ - \frac{(1 - \mu_i)\lambda_ip_i(1 - p_i)(1 - 2p_i)}{1 - p_i\lambda_i - q_i(1 - \lambda_i)}x_ix_i^T - \frac{(1 - \mu_i)\lambda_i^2p_i^2(1 - p_i)^2}{(1 - p_i\lambda_i - q_i(1 - \lambda_i))^2}x_ix_i^T\]
+
+\item Если $p_i = VGG[w]$
+
+\end{itemize}
+
+\end{document}

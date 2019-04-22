@@ -1,14 +1,27 @@
+"""
+Описание формата: http://www-personal.umich.edu/~kevynct/datasets/wsdm_crowdflower_2013_columns.txt
+Данные: http://www-personal.umich.edu/~kevynct/datasets/wsdm_rankagg_2013_readability_crowdflower_data.csv
+"""
+
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression
 
-from bm25 import Bm25Transformer
+from data_storage.bm25_transformer import Bm25Transformer
+from data_storage.data_storage import DataStorage
 
 
-class ChenData:
-    def __init__(self, file, max_features=100, workers_per_task=100, golden_boarder=100):
+class ChenData(DataStorage):
+    def __init__(self, file: str, max_features: int = None, workers_per_task: int = None, golden_boarder: int = None):
+        """
+
+        :param file: The name of file with data.
+        :param max_features: Maximum number of most popular features(words) to choose from all.
+        :param workers_per_task: Number of workers with answer to leave for each task.
+        :param golden_boarder: If task have more marks than this number it interprets as golden task with golden mark
+        equal to MV aggregation.
+        """
         self.workers_per_task = workers_per_task
         self.golden_boarder = golden_boarder
         self.max_features = max_features
@@ -42,18 +55,41 @@ class ChenData:
             .reset_index()\
             .set_index(['_unit_id'])
 
-    def create_features(self, texts, tasks_a, tasks_b, max_features=None):
+        if self.golden_boarder is None:
+            self.golden_boarder = self.workers_id.shape[0] + 10
+
+        if self.workers_per_task is None:
+            self.workers_per_task = self.workers_id.shape[0] + 10
+
+
+    @staticmethod
+    def create_features(texts, tasks_a, tasks_b, max_features: int = None):
+        """
+        Create features from texts.
+        :param texts: Array of texts to create set of words.
+        :param tasks_a: Array of texts of task A.
+        :param tasks_b: Array of texts of task B.
+        :param max_features: Maximum number of most popular features(words) to choose from all.
+        :return: BM25 embeddings of texts.
+        """
         bm25_transformer = Pipeline([
             ('vect', CountVectorizer(max_features=max_features, stop_words='english')),
-            ('tfidf', Bm25Transformer())
+            ('bm25', Bm25Transformer()),
+            ('add1', )
         ]).fit(texts)
 
         bm25_A = bm25_transformer.transform(tasks_a).toarray()
         bm25_B = bm25_transformer.transform(tasks_b).toarray()
 
-        return np.concatenate([bm25_A, bm25_B], axis=1)
+        return np.concatenate([bm25_A, bm25_B, np.ones((tasks_a.shape[0],))], axis=1)
 
-    def transform_points(self, seed=0):
+    def transform_points(self, seed: int = 0):
+        """
+        Transform text A and text B to features.
+
+        :param seed: Seed to use when choose workers for tasks (to leave no more then self.workers_per_task)
+        :return:
+        """
         tasks_groupby = self.row_data.groupby(['_unit_id'])
         tasks = tasks_groupby.first()
 
@@ -81,7 +117,7 @@ class ChenData:
             workers_votes = new_df['please_decide_which_passage_is_more_difficult'].values
 
             if workers_votes.shape[0] >= self.golden_boarder and np.isnan(self.y_real[i]):
-                self.y_real[i] = max(set(workers_votes.tolist()), key = workers_votes.tolist().count)
+                self.y_real[i] = max(set(workers_votes.tolist()), key=workers_votes.tolist().count)
                 cnt_new_gold += 1
 
             cnt_choose = min(self.workers_per_task, len(workers_votes))
@@ -102,7 +138,7 @@ class ChenData:
 
         pass
 
-    def bootstrap(self, size=None, marks_percentage=None, at_least=1, seed=0):
+    def bootstrap(self, size: int = None, marks_percentage: int = None, at_least:int = 1, seed:int = 0):
         """
         Choose uniformly <size> tasks and <cnt_marks> so that each task would have at least <at_least> marks. If for some
         task there are less marks then <at_least> all marks will be taken.
@@ -160,14 +196,13 @@ class ChenData:
 
 
 if __name__ == '__main__':
-    filepath = 'data/wsdm.csv'
+    """
+    Check if transformation works, count the consistency of labels. 
+    """
+
+    filepath = 'datasets/wsdm.csv'
     chendata = ChenData(filepath)
     chendata.transform_points()
-
-    lr = LinearRegression()
-    lr.fit(chendata.X[chendata.gold_tasks_index], chendata.y_real[chendata.gold_tasks_index])
-    print(
-        ((lr.predict(chendata.X[chendata.gold_tasks_index]) > 0.5).astype(int) == chendata.y_real[chendata.gold_tasks_index]).mean())
 
     _, boot_y, _ = chendata.bootstrap(400*chendata.X.shape[0])
     cnt_matches = 0
@@ -176,3 +211,7 @@ if __name__ == '__main__':
         cnt_matches += (boot_y[i, inds[0]] == boot_y[i, inds[1]])
 
     print("Agreement: {}".format(cnt_matches/boot_y.shape[0]))
+
+
+
+    print("Random: {}")

@@ -16,13 +16,12 @@ EPS = 1e-8
 # TODO: add l to docstring
 
 class EM_DS_Raykar:
-    def __init__(self, x, y, y_real, model, l=None, max_steps=200, verbose=False):
+    def __init__(self, x, y, model, l=None, max_steps=200, verbose=False):
         """
         :param x: Features (N x D).
         :param y: Worker answers (N x M).
-        :param y_real: Provide y_real for debug purposes.
         :param model: Probability classification model. Contains hidden optimization parameter w.
-        :param l: l that will be used. If no l are provided, l will be evaluated from other data.
+        :param l: l that will be used. If no l are provided, l will be evaluated from other datasets.
         :param max_steps: Max count of EM-steps.
         :param verbose:
         """
@@ -35,7 +34,6 @@ class EM_DS_Raykar:
         self.model = model
         self.l = l
         self.max_steps = max_steps
-        self.y_real = y_real
         self.verbose = verbose
 
     def a(self, alpha):
@@ -211,7 +209,7 @@ class EM_DS_Raykar:
             if step > self.max_steps:
                 break
 
-        return alpha, beta, self.model.get_w(), self.p1(l), l
+        return alpha, beta, self.model.get_w(), self.p1(l), l, exp_old
 
     @staticmethod
     def out(step, alpha, beta, mu, exp_new):

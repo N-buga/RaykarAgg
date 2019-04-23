@@ -9,10 +9,10 @@ if __name__ == '__main__':
     chendata = ChenData(filepath)
     chendata.transform_points()
 
-    reg_coeffs = [0.00001, 0.00005] #, 0.0001, 0.001, 0.01, 0.1, 1, 2, 5, 10, 15]
+    reg_coeffs = [1, 0.1, 0.01] #[0.00001, 0.00005] #, 0.0001, 0.001, 0.01, 0.1, 1, 2, 5, 10, 15]
     eps = 1e-5
-    percentage_of_marks = [15, 20] #, 30, 40, 60, 80, 100]
-    reg_types = ['lasso', 'ridge']
+    percentage_of_marks = [100, 80, 50] #[15, 20] #, 30, 40, 60, 80, 100]
+    reg_types = ['lasso'] #, 'ridge']
     cnt_trials = 1
 
     boot_params = []
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
     result = Experiments(chendata).run_experiments(boot_params, boot_params_description,
                                           RaykarDS_params, RaykarDS_params_description,
-                                          Raykar_params, RaykarDS_params_description,
+                                          Raykar_params, Raykar_params_description,
                                           DS_params, DS_params_description)
 
     with open('result.json', 'w') as file_to:

@@ -70,14 +70,9 @@ let for any $i$ $P(A | X_i) = \lambda$ и $P(B | X_i) = 1 - \lambda$.
 
 \[\beta_j = \frac{\sum\limits_{i = 1}^N (1 - \mu_i)(1 - y_i^j)}{\sum\limits_{i = 1}^N (1 - \mu_i)}\]
 
-\[\frac{d E_y \log P(\theta, y | D)}{d \lambda} = \sum\limits_{i = 1}^N \mu_i \frac{p_i - q_i}{p_i\lambda + q_i(1 - \lambda)} + (1 - \mu_i)\frac{q_i - p_i}{1 - p_i\lambda - q_i(1 - \lambda)} = 0\]
+Let $\lambda = \sigma(l)$.
 
-\[ \mu_i \frac{1}{p_i\lambda_i + q_i(1 - \lambda_i)} - (1 - \mu_i)\frac{1}{1 - p_i\lambda_i - q_i(1 - \lambda_i)} = 0\]
-
-\[\mu_i(1 - p_i\lambda_i - q_i + q_i\lambda_i) - (1 - \mu_i)(p_i\lambda_i + q_i - q_i\lambda_i) = \mu_i - p_i\mu_i\lambda_i - \mu_iq_i + \mu_iq_i\lambda_i - p_i\lambda_i - q_i + q_i\lambda_i + \mu_ip_i\lambda_i + \mu_iq_i - \mu_iq_i\lambda_i = 0\]
-
-\[\mu_i - p_i\lambda_i - q_i + q_i\lambda_i = 0 \]
-\[\lambda_i = \frac{q_i - \mu_i}{q_i - p_i}\]
+\[\frac{d E_y \log P(\theta, y | D)}{d l} = \sum\limits_{i = 1}^N \mu_i \frac{(p_i - q_i)\lambda(1 - \lambda)}{p_i\lambda + q_i(1 - \lambda)} + (1 - \mu_i)\frac{(q_i - p_i)\lambda(1 - \lambda)}{1 - p_i\lambda - q_i(1 - \lambda)}\]
 
 \[\frac{d E_y \log P(\theta, y | D)}{d w_k} = \sum\limits_{i = 1}^N \mu_i\frac{\lambda_i}{p_i\lambda_i + q_i(1 - \lambda_i)}(p_i)'_{w_k} + (1 - \mu_i)\frac{-\lambda_i}{1 - p_i\lambda_i - q_i(1 - \lambda_i)}(p_i)'_{w_k}\]
 

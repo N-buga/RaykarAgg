@@ -1,5 +1,5 @@
 import numpy as np
-from func_optimizers import GradientDescentOptimizer
+import scipy.special
 
 # N -- tasks, M -- max count of marks
 # y_i^j --> (N, M);
@@ -9,6 +9,8 @@ from func_optimizers import GradientDescentOptimizer
 # beta^j --> (M,)
 # mu --> (N,)
 import sys
+
+from func_optimizers import AdaGradOptimizer
 
 EPS = 1e-8
 
@@ -72,11 +74,11 @@ class EM_DS_Raykar:
 
     def p1(self, l):
         if self.l is not None:
-            ll = self.l
+            lambda_ = scipy.special.expit(self.l)
         else:
-            ll = l
+            lambda_ = scipy.special.expit(l)
 
-        return ll * self.model.p() + (1 - ll) * self.q()
+        return lambda_ * self.model.p() + (1 - lambda_) * self.q()
 
     def initialize_values(self):
         """
@@ -90,7 +92,7 @@ class EM_DS_Raykar:
         alpha = 0.6 * np.ones((self.y.shape[1],))
         beta = 0.6 * np.ones((self.y.shape[1],))
         self.model.init_model(x=self.x, y=self.y)
-        l = 0.5 * np.ones((self.y.shape[0])) #np.zeros((self.y.shape[0]))
+        l = 0
 
         mu = self.update_mu(alpha, beta, l)
 
@@ -98,9 +100,7 @@ class EM_DS_Raykar:
 
     def update_vars(self, mu, l):
         if self.l is not None:
-            ll = self.l
-        else:
-            ll = l
+            l = self.l
 
         mu_nan0 = np.where(np.transpose(~np.isnan(self.y)), mu, 0)
         mu_nan1 = np.where(np.transpose(~np.isnan(self.y)), mu, 1)
@@ -116,42 +116,44 @@ class EM_DS_Raykar:
                 beta=new_beta,
                 p=p,
                 mu=mu,
-                l=ll
+                l=l
             ),
             mu=mu,
-            l=ll
+            lambda_=scipy.special.expit(l)
         )
 
         q = self.q()
         p = self.model.p()
 
-        ind_change = abs(q - p) > EPS
-
-        new_l = l.copy()
-        new_l[ind_change] = (q[ind_change] - mu[ind_change]) / (q[ind_change] - p[ind_change])
-
-        wrong_l = np.logical_or(new_l < 0, new_l > 1)
-        new_l[wrong_l] = l[wrong_l]
-
-        # l_less0 = new_l <= EPS
-        # l_more1 = new_l >= 1 - EPS
-        # new_l[l_less0] = EPS
-        # new_l[l_more1] = 1 - EPS
+        new_l = AdaGradOptimizer().optimize(
+            l,
+            func=lambda l: self.e_loglikelihood(
+                alpha=new_alpha,
+                beta=new_beta,
+                p=p,
+                mu=mu,
+                l=l
+            ),
+            grad_func=lambda var: np.sum(scipy.special.expit(var) * (1 - scipy.special.expit(var)) *
+                                  (mu * (p - q) / (scipy.special.expit(var) * p + q * (1 - scipy.special.expit(var))) +
+                                   ((1 - mu) * (q - p) / (
+                                           1 - p * scipy.special.expit(var) - q * (1 - scipy.special.expit(var)))))),
+            hess_func=None
+        )
 
         return new_alpha, new_beta, new_l
 
     def e_loglikelihood(self, alpha, beta, p, mu, l):
+        if self.l is not None:
+            l = self.l
+        lambda_ = scipy.special.expit(l)
+
         a = self.a(alpha)
         b = self.b(beta)
         q = self.q()
 
-        if self.l is not None:
-            ll = self.l
-        else:
-            ll = l
-
-        return (mu * np.log(a) + mu * np.log(p * ll + q * (1 - ll)) + (1 - mu) * np.log(b) + \
-                (1 - mu) * np.log(1 - p * ll - q * (1 - ll))).sum()
+        return (mu * np.log(a) + mu * np.log(p * lambda_ + q * (1 - lambda_)) + (1 - mu) * np.log(b) + \
+                (1 - mu) * np.log(1 - p * lambda_ - q * (1 - lambda_))).sum()
 
     # def e_loglikelihoodRaykar(self, alpha, beta, w, mu):
     #     a = self.a(alpha)
@@ -164,17 +166,16 @@ class EM_DS_Raykar:
     #            (1 - mu)*np.log((1 - p)*self.l)).sum()
 
     def update_mu(self, alpha, beta, l):
+        if self.l is not None:
+            l = self.l
+        lambda_ = scipy.special.expit(l)
+
         a = self.a(alpha)
         b = self.b(beta)
         p = self.model.p()
         q = self.q()
 
-        if self.l is not None:
-            ll = self.l
-        else:
-            ll = l
-
-        new_mu = a * p / (a * p + b * (1 - p)) * ll + a * q / (a * q + b * (1 - q)) * (1 - ll)
+        new_mu = a * p / (a * p + b * (1 - p)) * lambda_ + a * q / (a * q + b * (1 - q)) * (1 - lambda_)
 
         new_mu[new_mu < EPS] = EPS
         new_mu[new_mu > 1 - EPS] = 1 - EPS

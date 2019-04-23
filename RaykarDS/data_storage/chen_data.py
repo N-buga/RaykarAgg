@@ -74,14 +74,13 @@ class ChenData(DataStorage):
         """
         bm25_transformer = Pipeline([
             ('vect', CountVectorizer(max_features=max_features, stop_words='english')),
-            ('bm25', Bm25Transformer()),
-            ('add1', )
+            ('bm25', Bm25Transformer())
         ]).fit(texts)
 
         bm25_A = bm25_transformer.transform(tasks_a).toarray()
         bm25_B = bm25_transformer.transform(tasks_b).toarray()
 
-        return np.concatenate([bm25_A, bm25_B, np.ones((tasks_a.shape[0],))], axis=1)
+        return np.concatenate([bm25_A, bm25_B, np.ones((tasks_a.shape[0], 1))], axis=1)
 
     def transform_points(self, seed: int = 0):
         """

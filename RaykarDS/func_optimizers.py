@@ -100,7 +100,10 @@ class AdaGradOptimizer(Optimizer):
         :param hess_func: The hessian of function. Isn't necessary to provide.
         :return: optimal value.
         """
-        new_var = var.copy()
+        if isinstance(var, np.ndarray):
+            new_var = var.copy()
+        else:
+            new_var = np.ones((1,))*var
         # old_var = new_var
         # old_func_value = func(old_var)
 
@@ -119,7 +122,11 @@ class AdaGradOptimizer(Optimizer):
             # else:
             #     old_var = new_var
             #     old_func_value = new_func_value
-        return new_var
+
+        if not isinstance(var, np.ndarray):
+            return new_var[0]
+        else:
+            return new_var
 
 
 class NewtonOptimizer(Optimizer):

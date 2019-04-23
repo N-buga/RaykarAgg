@@ -1,22 +1,13 @@
 import numpy as np
-from keras.optimizers import SGD
-
-from keras import backend as K
+import scipy.special
 from scipy import sparse
 
 from em_DSraykar import EPS
-from keras.models import Sequential
-from keras.layers.core import Flatten, Dense, Dropout
-from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
 
 from func_optimizers import GradientDescentOptimizer
 
 
 #TODO: DOCSTRINGS!
-
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
 
 class Model:
     def __init__(self):
@@ -66,12 +57,12 @@ class LogisticRegressionModel(Model):
         :param w:
         :return:
         """
-        p = sigmoid(self.sparse_x.dot(w))
+        p = scipy.special.expit(self.sparse_x.dot(w))
         p[p < EPS] = EPS
         p[p + EPS > 1] = 1 - EPS
         return p
 
-    def grad_w(self, q, w, mu, l):
+    def grad_w(self, q, w, mu, lambda_):
         """
         Gradient of w.
         :param w: Weights in linear regression.
@@ -81,7 +72,7 @@ class LogisticRegressionModel(Model):
         """
         p = self._p_w(w)
 
-        koeff = p * (1 - p) * (mu * l / (p * l + q * (1 - l)) - (1 - mu) * l / (1 - p * l - q * (1 - l)))
+        koeff = p * (1 - p) * (mu * lambda_ / (p * lambda_ + q * (1 - lambda_)) - (1 - mu) * lambda_ / (1 - p * lambda_ - q * (1 - lambda_)))
 
         if self.reg_type == 'ridge':
             reg = 2*self.reg_coeff*w
@@ -100,21 +91,21 @@ class LogisticRegressionModel(Model):
 
         return sparse_res
 
-    def hess_w(self, q, w, mu, l):
+    def hess_w(self, q, w, mu, lambda_):
         """
         Hessian of w.
         :param w: Weights in linear regression.
         :param mu:
-        :param l:
+        :param lambda_:
         :return: (d x d) np array.
         """
 
         trans_x = np.transpose(self.x)
         p = self._p_w(w)
-        denom1 = (p * l + q * (1 - l))
-        denom2 = (1 - p * l - q * (1 - l))
-        numer1 = l * p * (1 - p) * (1 - 2 * p)
-        numer2 = l * l * p * p * (1 - p) * (1 - p)
+        denom1 = (p * lambda_ + q * (1 - lambda_))
+        denom2 = (1 - p * lambda_ - q * (1 - lambda_))
+        numer1 = lambda_ * p * (1 - p) * (1 - 2 * p)
+        numer2 = lambda_ * lambda_ * p * p * (1 - p) * (1 - p)
         koeff = mu * numer1 / denom1 - mu * numer2 / (denom1 * denom1) - \
                 (1 - mu) * numer1 / denom2 - (1 - mu) * numer2 / (denom2 * denom2)
         x_with_values = np.transpose(koeff * trans_x)
@@ -130,12 +121,12 @@ class LogisticRegressionModel(Model):
 
         return ans_sq - self.x.shape[0]*reg
 
-    def update_w(self, a, b, q, e_loglikelihood, mu, l):
+    def update_w(self, a, b, q, e_loglikelihood, mu, lambda_):
         new_w = self.optimizer.optimize(
             self.w,
             func=lambda var: e_loglikelihood(self._p_w(var)),
-            grad_func=lambda var: self.grad_w(q=q, w=var, mu=mu, l=l),
-            hess_func=lambda var: self.hess_w(q=q, w=var, mu=mu, l=l)
+            grad_func=lambda var: self.grad_w(q=q, w=var, mu=mu, lambda_=lambda_),
+            hess_func=lambda var: self.hess_w(q=q, w=var, mu=mu, lambda_=lambda_)
         )
 
         self.w = new_w

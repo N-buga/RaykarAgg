@@ -4,7 +4,7 @@ from scipy import sparse
 
 from em_DSraykar import EPS
 
-from func_optimizers import GradientDescentOptimizer
+from func_optimizers import AdaGradOptimizer
 
 
 #TODO: DOCSTRINGS!
@@ -29,7 +29,7 @@ class Model:
 
 
 class LogisticRegressionModel(Model):
-    def __init__(self, optimizer=GradientDescentOptimizer(), reg_type='ridge', reg_coeff=0):
+    def __init__(self, optimizer=AdaGradOptimizer(), reg_type='ridge', reg_coeff=0):
         super().__init__()
         self.optimizer = optimizer
         self.reg_type = reg_type

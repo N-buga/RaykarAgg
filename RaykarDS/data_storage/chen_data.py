@@ -172,7 +172,7 @@ class ChenData(DataStorage):
             cnt_marks = int(marks_percentage*(~np.isnan(self.y)).sum()//100)
 
         assert (size*at_least <= cnt_marks)
-        assert (cnt_marks <= (~np.isnan(boot_y)).sum())
+        cnt_marks = min(cnt_marks, (~np.isnan(boot_y)).sum())
 
         flatten_boot_y = boot_y.flatten()
         flatten_boot_y[marks_to_take] = None

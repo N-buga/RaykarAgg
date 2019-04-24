@@ -18,7 +18,7 @@ EPS = 1e-8
 # TODO: add l to docstring
 
 class EM_DS_Raykar:
-    def __init__(self, x, y, model, l=None, max_steps=200, verbose=False):
+    def __init__(self, x, y, model, lambda_=None, max_steps=200, verbose=False):
         """
         :param x: Features (N x D).
         :param y: Worker answers (N x M).
@@ -34,7 +34,7 @@ class EM_DS_Raykar:
         self.y_nan1 = np.where(np.isnan(self.y), 1, self.y)
 
         self.model = model
-        self.l = l
+        self.lambda_ = lambda_
         self.max_steps = max_steps
         self.verbose = verbose
 
@@ -73,8 +73,8 @@ class EM_DS_Raykar:
         return q
 
     def p1(self, l):
-        if self.l is not None:
-            lambda_ = scipy.special.expit(self.l)
+        if self.lambda_ is not None:
+            lambda_ = self.lambda_
         else:
             lambda_ = scipy.special.expit(l)
 
@@ -99,8 +99,10 @@ class EM_DS_Raykar:
         return alpha, beta, mu, l
 
     def update_vars(self, mu, l):
-        if self.l is not None:
-            l = self.l
+        if self.lambda_ is not None:
+            lambda_ = self.lambda_
+        else:
+            lambda_ = scipy.special.expit(l)
 
         mu_nan0 = np.where(np.transpose(~np.isnan(self.y)), mu, 0)
         mu_nan1 = np.where(np.transpose(~np.isnan(self.y)), mu, 1)
@@ -116,37 +118,41 @@ class EM_DS_Raykar:
                 beta=new_beta,
                 p=p,
                 mu=mu,
-                l=l
+                lambda_=lambda_
             ),
             mu=mu,
-            lambda_=scipy.special.expit(l)
+            lambda_=lambda_
         )
 
         q = self.q()
         p = self.model.p()
 
-        new_l = AdaGradOptimizer().optimize(
-            l,
-            func=lambda l: self.e_loglikelihood(
-                alpha=new_alpha,
-                beta=new_beta,
-                p=p,
-                mu=mu,
-                l=l
-            ),
-            grad_func=lambda var: np.sum(scipy.special.expit(var) * (1 - scipy.special.expit(var)) *
-                                  (mu * (p - q) / (scipy.special.expit(var) * p + q * (1 - scipy.special.expit(var))) +
-                                   ((1 - mu) * (q - p) / (
-                                           1 - p * scipy.special.expit(var) - q * (1 - scipy.special.expit(var)))))),
-            hess_func=None
-        )
+        if not self.lambda_:
+            new_l = AdaGradOptimizer().optimize(
+                l,
+                func=lambda l: self.e_loglikelihood(
+                    alpha=new_alpha,
+                    beta=new_beta,
+                    p=p,
+                    mu=mu,
+                    l=l
+                ),
+                grad_func=lambda var: np.sum(scipy.special.expit(var) * (1 - scipy.special.expit(var)) *
+                                      (mu * (p - q) / (scipy.special.expit(var) * p + q * (1 - scipy.special.expit(var))) +
+                                       ((1 - mu) * (q - p) / (
+                                               1 - p * scipy.special.expit(var) - q * (1 - scipy.special.expit(var)))))),
+                hess_func=None
+            )
+        else:
+            new_l = l
 
         return new_alpha, new_beta, new_l
 
     def e_loglikelihood(self, alpha, beta, p, mu, l):
-        if self.l is not None:
-            l = self.l
-        lambda_ = scipy.special.expit(l)
+        if self.lambda_ is not None:
+            lambda_ = self.lambda_
+        else:
+            lambda_ = scipy.special.expit(l)
 
         a = self.a(alpha)
         b = self.b(beta)
@@ -166,9 +172,10 @@ class EM_DS_Raykar:
     #            (1 - mu)*np.log((1 - p)*self.l)).sum()
 
     def update_mu(self, alpha, beta, l):
-        if self.l is not None:
-            l = self.l
-        lambda_ = scipy.special.expit(l)
+        if self.lambda_ is not None:
+            lambda_ = self.lambda_
+        else:
+            lambda_ = scipy.special.expit(l)
 
         a = self.a(alpha)
         b = self.b(beta)

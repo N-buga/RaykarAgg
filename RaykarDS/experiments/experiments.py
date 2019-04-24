@@ -16,7 +16,7 @@ class Experiments:
 
     @classmethod
     def run_RaykarDS(cls, list_features: [np.array], list_workers_answers: [np.array], model: Model,
-                     l: float = None, max_steps=200):
+                     lambda_: float = None, max_steps=200):
         """
         Run DSRaykar algorithm for each trial, calculate mean and std.
 
@@ -40,7 +40,7 @@ class Experiments:
             workers_answers = list_workers_answers[i]
             beg_l = time.time()
 
-            em_ds_raykar = EM_DS_Raykar(features, workers_answers, model=model, l=l, max_steps=max_steps)
+            em_ds_raykar = EM_DS_Raykar(features, workers_answers, model=model, lambda_=lambda_, max_steps=max_steps)
             res_alpha, res_beta, res_w, res_p1, res_l, res_likelihood = em_ds_raykar.em_algorithm()
 
             times.append(time.time() - beg_l)
@@ -72,7 +72,7 @@ class Experiments:
         :return: list of results.
         """
 
-        return cls.run_RaykarDS(list_features, list_workers_answers, model, VERY_BIG_NUMBER, max_steps)
+        return cls.run_RaykarDS(list_features, list_workers_answers, model, 1, max_steps)
 
     @classmethod
     def run_DS(cls, list_features: [np.array], list_workers_answers: [np.array], model: Model, max_steps: int = 200):
@@ -86,7 +86,7 @@ class Experiments:
         :return: list of results.
         """
 
-        return cls.run_RaykarDS(list_features, list_workers_answers, model, -VERY_BIG_NUMBER, max_steps)
+        return cls.run_RaykarDS(list_features, list_workers_answers, model, 0, max_steps)
 
     def bootstrap_data(self, cnt_trials, size: int = None, marks_percentage: int = None, at_least: int = 1, seeds: list = None):
         """
@@ -128,7 +128,13 @@ class Experiments:
 
         def arrays_tolist(value):
             if isinstance(value, np.ndarray):
-                return value.tolist()
+                res_list = []
+                for val in value:
+                    if isinstance(val, np.ndarray):
+                        res_list.append(val.tolist())
+                    else:
+                        res_list.append(val)
+                return res_list
             else:
                 return value
 
@@ -181,9 +187,6 @@ class Experiments:
                 result[cur_boot_descr][cur_descr] = self.get_statistics(list_real_answers, RaykarDS_result)
 
                 with open(file_to_save, 'w') as file_to:
-                    json.dump(result, file_to)
-
-                with open('stat' + file_to_save, 'w') as file_to:
                     json.dump(result, file_to)
 
             for j, Raykar_param in enumerate(Raykar_params):
